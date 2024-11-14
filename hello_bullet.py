@@ -11,7 +11,7 @@ planeId = p.loadURDF("plane.urdf")
 cubeStartPos = [0,0,0]
 cubeStartOrientation = p.getQuaternionFromEuler([0,0,0])
 
-robotID = p.loadURDF("leg_right.urdf",cubeStartPos, cubeStartOrientation, 
+robotID = p.loadURDF("hexapod.urdf",cubeStartPos, cubeStartOrientation, 
                    # useMaximalCoordinates=1, ## New feature in Pybullet
                    flags=p.URDF_USE_INERTIA_FROM_FILE)
 
