@@ -1,0 +1,166 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="hexapod">
+    <link name="base_link">
+        <inertial>
+            <origin xyz="-1.5537100736355798e-14 -0.002038403435229488 0.006938019086318811" rpy="0.0 0.0 0.0" />
+            <mass value="0.6502139585141" />
+            <inertia ixx="0.0022857824718964096" iyy="0.0021948811514730725" izz="0.00445927593589297" ixy="9.76998087550513e-17" iyz="2.7823052373888905e-06" ixz="-1.4621550745303059e-18" />
+        </inertial>
+        <visual name="base_link_visual">
+            <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+            <geometry>
+                <mesh filename="meshes/base.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="base_link_collision">
+            <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+            <geometry>
+                <mesh filename="meshes/base.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="leg1_MG996c">
+        <inertial>
+            <origin xyz="-0.021304026820941267 0.013879409959177549 0.008216241413562222" rpy="0.0 -0.0 0.0" />
+            <mass value="0.20641808912389753" />
+            <inertia ixx="3.9125183253751247e-05" iyy="3.912518931914607e-05" izz="3.601102430698445e-05" ixy="1.135155464957328e-05" iyz="5.607951873505041e-07" ixz="-5.607857783954167e-07" />
+        </inertial>
+        <visual name="leg1_MG996c_visual">
+            <origin xyz="-0.013930002111251399 -0.007283200121891467 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 2.356194490192345" />
+            <geometry>
+                <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="leg1_MG996c_collision">
+            <origin xyz="-0.013930002111251399 -0.007283200121891467 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 2.356194490192345" />
+            <geometry>
+                <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="leg2_MG996c">
+        <inertial>
+            <origin xyz="-0.02487844797278954 -0.00524999778092809 0.008216241413562222" rpy="0.0 -0.0 0.0" />
+            <mass value="0.20641808912389753" />
+            <inertia ixx="2.7773631636875524e-05" iyy="5.047674093602156e-05" izz="3.601102430698445e-05" ixy="-3.0326974862454255e-12" iyz="6.653135933115804e-12" ixz="-7.93077506528665e-07" />
+        </inertial>
+        <visual name="leg2_MG996c_visual">
+            <origin xyz="-0.00469999999999998 -0.014999999999999914 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 3.141592653589793" />
+            <geometry>
+                <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="leg2_MG996c_collision">
+            <origin xyz="-0.00469999999999998 -0.014999999999999914 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 3.141592653589793" />
+            <geometry>
+                <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="leg3_MG996c">
+        <inertial>
+            <origin xyz="-0.013879409959183865 -0.02130402682093723 0.008216241413562222" rpy="0.0 -0.0 0.0" />
+            <mass value="0.20641808912389753" />
+            <inertia ixx="3.912518931914618e-05" iyy="3.9125183253751247e-05" izz="3.60110243069851e-05" ixy="-1.1351554649573063e-05" iyz="-5.607857783954167e-07" ixz="-5.60795187350477e-07" />
+        </inertial>
+        <visual name="leg3_MG996c_visual">
+            <origin xyz="0.007283200121885147 -0.013930002111247354 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 -2.356194490192345" />
+            <geometry>
+                <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="leg3_MG996c_collision">
+            <origin xyz="0.007283200121885147 -0.013930002111247354 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 -2.356194490192345" />
+            <geometry>
+                <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="leg4_MG996c">
+        <inertial>
+            <origin xyz="0.021304026820941204 -0.01387940995917754 0.008216241413562222" rpy="0.0 -0.0 0.0" />
+            <mass value="0.20641808912389753" />
+            <inertia ixx="3.912518325375103e-05" iyy="3.912518931914607e-05" izz="3.601102430698445e-05" ixy="1.1351554649573063e-05" iyz="-5.60795187350477e-07" ixz="5.607857783954031e-07" />
+        </inertial>
+        <visual name="leg4_MG996c_visual">
+            <origin xyz="0.013930002111251337 0.007283200121891475 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 -0.7853981633974483" />
+            <geometry>
+                <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="leg4_MG996c_collision">
+            <origin xyz="0.013930002111251337 0.007283200121891475 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 -0.7853981633974483" />
+            <geometry>
+                <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="leg5_MG996c">
+        <inertial>
+            <origin xyz="0.02487844797278954 0.005249997780928263 0.008216241413562222" rpy="0.0 -0.0 0.0" />
+            <mass value="0.20641808912389753" />
+            <inertia ixx="2.7773631636875538e-05" iyy="5.047674093602156e-05" izz="3.601102430698445e-05" ixy="-3.0326974931145142e-12" iyz="-6.653135931721467e-12" ixz="7.93077506528665e-07" />
+        </inertial>
+        <visual name="leg5_MG996c_visual">
+            <origin xyz="0.00469999999999998 0.015000000000000084 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 0.0" />
+            <geometry>
+                <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="leg5_MG996c_collision">
+            <origin xyz="0.00469999999999998 0.015000000000000084 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 0.0" />
+            <geometry>
+                <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="leg6_MG996c">
+        <inertial>
+            <origin xyz="0.013879409959183846 0.021304026820937193 0.008216241413562222" rpy="0.0 -0.0 0.0" />
+            <mass value="0.20641808912389753" />
+            <inertia ixx="3.912518931914661e-05" iyy="3.9125183253751247e-05" izz="3.6011024306985316e-05" ixy="-1.1351554649573388e-05" iyz="5.607857783954167e-07" ixz="5.607951873505041e-07" />
+        </inertial>
+        <visual name="leg6_MG996c_visual">
+            <origin xyz="-0.00728320012188517 0.013930002111247335 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 0.7853981633974483" />
+            <geometry>
+                <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="leg6_MG996c_collision">
+            <origin xyz="-0.00728320012188517 0.013930002111247335 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 0.7853981633974483" />
+            <geometry>
+                <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <joint name="base_link_leg1_MG996c" type="fixed">
+        <origin xyz="-0.03264053 -0.060065150000000005 0.013999999999999999" rpy="3.141592653589793 -0.0 0.0" />
+        <parent link="base_link" />
+        <child link="leg1_MG996c" />
+    </joint>
+    <joint name="base_link_leg2_MG996c" type="fixed">
+        <origin xyz="-0.046200000000000005 -0.00525 0.013999999999999999" rpy="3.141592653589793 -0.0 0.0" />
+        <parent link="base_link" />
+        <child link="leg2_MG996c" />
+    </joint>
+    <joint name="base_link_leg3_MG996c" type="fixed">
+        <origin xyz="-0.04006515 0.05264053 0.013999999999999999" rpy="3.141592653589793 -0.0 0.0" />
+        <parent link="base_link" />
+        <child link="leg3_MG996c" />
+    </joint>
+    <joint name="base_link_leg4_MG996c" type="fixed">
+        <origin xyz="0.03264053 0.060065150000000005 0.013999999999999999" rpy="3.141592653589793 -0.0 0.0" />
+        <parent link="base_link" />
+        <child link="leg4_MG996c" />
+    </joint>
+    <joint name="base_link_leg5_MG996c" type="fixed">
+        <origin xyz="0.046200000000000005 0.00525 0.013999999999999999" rpy="3.141592653589793 -0.0 0.0" />
+        <parent link="base_link" />
+        <child link="leg5_MG996c" />
+    </joint>
+    <joint name="base_link_leg6_MG996c" type="fixed">
+        <origin xyz="0.04006515 -0.05264053 0.013999999999999999" rpy="3.141592653589793 -0.0 0.0" />
+        <parent link="base_link" />
+        <child link="leg6_MG996c" />
+    </joint>
+</robot>
