@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<robot name="right_leg">
+<robot name="leg_right">
     <link name="base_link">
         <inertial>
             <origin xyz="0.020178447972789563 0.009750002219071822 -0.008216241413562224" rpy="0.0 0.0 0.0" />
@@ -16,6 +16,25 @@
             <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="coxa">
+        <inertial>
+            <origin xyz="0.025372840494156005 -0.0001517412308491717 -0.02487963924889388" rpy="0.0 -0.0 0.0" />
+            <mass value="0.07898637744159479" />
+            <inertia ixx="4.963139741329647e-05" iyy="7.128210636066343e-05" izz="2.4265877776945353e-05" ixy="2.1127014631552984e-07" iyz="3.990735838610307e-08" ixz="-5.949787137622525e-06" />
+        </inertial>
+        <visual name="coxa_visual">
+            <origin xyz="0.053000000000000005 -2.220446049250313e-18 0.001000000000000003" rpy="0.0 -0.0 1.5707963267948966" />
+            <geometry>
+                <mesh filename="meshes/coxa_right.stl" scale="0.001 0.001 0.001" />
+            </geometry>
+        </visual>
+        <collision name="coxa_collision">
+            <origin xyz="0.053000000000000005 -2.220446049250313e-18 0.001000000000000003" rpy="0.0 -0.0 1.5707963267948966" />
+            <geometry>
+                <mesh filename="meshes/coxa_right.stl" scale="0.001 0.001 0.001" />
             </geometry>
         </collision>
     </link>
@@ -38,22 +57,22 @@
             </geometry>
         </collision>
     </link>
-    <link name="coxa">
+    <link name="femur">
         <inertial>
-            <origin xyz="0.025372840494156005 -0.0001517412308491717 -0.02487963924889388" rpy="0.0 -0.0 0.0" />
-            <mass value="0.07898637744159479" />
-            <inertia ixx="4.963139741329647e-05" iyy="7.128210636066343e-05" izz="2.4265877776945353e-05" ixy="2.1127014631552984e-07" iyz="3.990735838610307e-08" ixz="-5.949787137622525e-06" />
+            <origin xyz="0.003124784594725227 -0.02288109973213504 0.045527607166960714" rpy="0.0 -0.0 0.0" />
+            <mass value="0.2061355014221324" />
+            <inertia ixx="0.00015591895758032944" iyy="8.656809797940234e-05" izz="0.000100988308472931" ixy="3.823774703431885e-06" iyz="-4.634784730535981e-06" ixz="-1.1513127818724243e-05" />
         </inertial>
-        <visual name="coxa_visual">
-            <origin xyz="0.053000000000000005 -2.220446049250313e-18 0.001000000000000003" rpy="0.0 -0.0 1.5707963267948966" />
+        <visual name="femur_visual">
+            <origin xyz="1.7763568394002505e-17 -0.04300000000000001 -2.7755575615628914e-19" rpy="1.5707963267948966 -0.6108652381980154 -6.123233995736765e-17" />
             <geometry>
-                <mesh filename="meshes/right_coxa.stl" scale="0.001 0.001 0.001" />
+                <mesh filename="meshes/femur_right.stl" scale="0.001 0.001 0.001" />
             </geometry>
         </visual>
-        <collision name="coxa_collision">
-            <origin xyz="0.053000000000000005 -2.220446049250313e-18 0.001000000000000003" rpy="0.0 -0.0 1.5707963267948966" />
+        <collision name="femur_collision">
+            <origin xyz="1.7763568394002505e-17 -0.04300000000000001 -2.7755575615628914e-19" rpy="1.5707963267948966 -0.6108652381980154 -6.123233995736765e-17" />
             <geometry>
-                <mesh filename="meshes/right_coxa.stl" scale="0.001 0.001 0.001" />
+                <mesh filename="meshes/femur_right.stl" scale="0.001 0.001 0.001" />
             </geometry>
         </collision>
     </link>
@@ -85,13 +104,13 @@
         <visual name="tibia_visual">
             <origin xyz="0.0442999983218489 -0.007300000000000009 -0.0047500049074344465" rpy="1.5707963267948966 -1.5707963267948963 0" />
             <geometry>
-                <mesh filename="meshes/right_tibia.stl" scale="0.001 0.001 0.001" />
+                <mesh filename="meshes/tibia_right.stl" scale="0.001 0.001 0.001" />
             </geometry>
         </visual>
         <collision name="tibia_collision">
             <origin xyz="0.0442999983218489 -0.007300000000000009 -0.0047500049074344465" rpy="1.5707963267948966 -1.5707963267948963 0" />
             <geometry>
-                <mesh filename="meshes/right_tibia.stl" scale="0.001 0.001 0.001" />
+                <mesh filename="meshes/tibia_right.stl" scale="0.001 0.001 0.001" />
             </geometry>
         </collision>
     </link>
@@ -114,25 +133,6 @@
             </geometry>
         </collision>
     </link>
-    <link name="femur">
-        <inertial>
-            <origin xyz="0.003124784594725227 -0.02288109973213504 0.045527607166960714" rpy="0.0 -0.0 0.0" />
-            <mass value="0.2061355014221324" />
-            <inertia ixx="0.00015591895758032944" iyy="8.656809797940234e-05" izz="0.000100988308472931" ixy="3.823774703431885e-06" iyz="-4.634784730535981e-06" ixz="-1.1513127818724243e-05" />
-        </inertial>
-        <visual name="femur_visual">
-            <origin xyz="1.7763568394002505e-17 -0.04300000000000001 -2.7755575615628914e-19" rpy="1.5707963267948966 -0.6108652381980154 -6.123233995736765e-17" />
-            <geometry>
-                <mesh filename="meshes/right_femur.stl" scale="0.001 0.001 0.001" />
-            </geometry>
-        </visual>
-        <collision name="femur_collision">
-            <origin xyz="1.7763568394002505e-17 -0.04300000000000001 -2.7755575615628914e-19" rpy="1.5707963267948966 -0.6108652381980154 -6.123233995736765e-17" />
-            <geometry>
-                <mesh filename="meshes/right_femur.stl" scale="0.001 0.001 0.001" />
-            </geometry>
-        </collision>
-    </link>
     <joint name="coxa_joint" type="revolute">
         <origin xyz="0.03025 0.00975 0.01005" rpy="0.0 -0.0 0.0" />
         <parent link="base_link" />
@@ -150,7 +150,7 @@
         <parent link="MG996f" />
         <child link="femur" />
         <axis xyz="0.0 1.0 0.0" />
-        <limit lower="-0.785398" upper="2.356194" effort="1000000" velocity="1000000" />
+        <limit lower="0" upper="2.356194" effort="1000000" velocity="1000000" />
     </joint>
     <joint name="tibia_joint" type="revolute">
         <origin xyz="0.02958327999999999 0.0009999999999999966 0.06344155" rpy="-3.141592653589793 8.791013934755433e-33 0.0" />
