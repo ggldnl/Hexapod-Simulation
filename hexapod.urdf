@@ -1,6 +1,18 @@
 <?xml version='1.0' encoding='utf-8'?>
 <robot name="hexapod">
 
+    <material name="black">
+        <color rgba="0 0 0 1" />
+    </material>
+
+    <material name="white">
+        <color rgba="1 1 1 1" />
+    </material>
+
+    <material name="orange">
+        <color rgba="0.902 0.345 0 1" />
+    </material>
+
     <link name="base_link">
         <inertial>
             <origin xyz="-1.5537100736355798e-14 -0.002038403435229488 0.006938019086318811" rpy="0.0 0.0 0.0" />
@@ -12,6 +24,7 @@
             <geometry>
                 <mesh filename="meshes/base.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="base_link_collision">
             <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
@@ -33,6 +46,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg1_MG996c_collision">
             <origin xyz="-0.013930002111251399 -0.007283200121891467 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 2.356194490192345" />
@@ -52,6 +66,7 @@
             <geometry>
                 <mesh filename="meshes/coxa_right.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg1_coxa_collision">
             <origin xyz="-0.03747666052846265 -0.03747666052845746 0.0010000000000000054" rpy="0.0 -0.0 -0.7853981633974483" />
@@ -71,6 +86,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg1_MG996f_collision">
             <origin xyz="0.004700000000000009 0.010606600931670993 -0.010606605868277549" rpy="2.356194490192345 5.551115123125783e-17 5.551115123125783e-17" />
@@ -90,6 +106,7 @@
             <geometry>
                 <mesh filename="meshes/femur_right.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg1_femur_collision">
             <origin xyz="-0.030405593688388067 0.03040558825519895 1.1102230246251566e-17" rpy="1.5707963267948966 -0.6108652381980156 -2.356194490192345" />
@@ -109,6 +126,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg1_MG996t_collision">
             <origin xyz="-0.029203512090292722 0.013576447026899193 0.009750004907434402" rpy="-1.5707963267948968 -7.053861262421881e-16 -0.7853981633974486" />
@@ -128,6 +146,7 @@
             <geometry>
                 <mesh filename="meshes/tibia_right.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg1_tibia_collision">
             <origin xyz="-0.03648670888047988 -0.026162954811762767 -0.004750004907434402" rpy="-0.7853981633974483 -1.570796326794896 0" />
@@ -147,6 +166,7 @@
             <geometry>
                 <mesh filename="meshes/shield.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="orange" />
         </visual>
         <collision name="leg1_shield_collision">
             <origin xyz="-4.907434369982866e-09 0.0014142156932291528 0.02687005387244227" rpy="1.5707963267948968 0.7853981633974483 1.570796326794897" />
@@ -168,6 +188,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg2_MG996c_collision">
             <origin xyz="-0.00469999999999998 -0.014999999999999914 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 3.141592653589793" />
@@ -187,6 +208,7 @@
             <geometry>
                 <mesh filename="meshes/coxa_right.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg2_coxa_collision">
             <origin xyz="-0.05299999999999999 -9.428360203700333e-17 0.0010000000000000054" rpy="0.0 -0.0 -1.5707963267948966" />
@@ -206,6 +228,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg2_MG996t_collision">
             <origin xyz="-0.030249998321848822 -0.0110499999999999 0.00975000490743443" rpy="-1.5707963267948966 -5.608327010386881e-16 -6.123233995736767e-17" />
@@ -225,6 +248,7 @@
             <geometry>
                 <mesh filename="meshes/femur_right.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg2_femur_collision">
             <origin xyz="0.0 0.0429999999999999 1.1102230246251566e-17" rpy="1.5707963267948966 -0.6108652381980154 -3.141592653589793" />
@@ -244,6 +268,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg2_MG996f_collision">
             <origin xyz="0.004700000000000009 -1.0325074129013956e-16 -0.015" rpy="1.5707963267948968 -0.0 3.749399456654644e-33" />
@@ -263,6 +288,7 @@
             <geometry>
                 <mesh filename="meshes/tibia_right.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg2_tibia_collision">
             <origin xyz="-0.0442999983218488 0.0072999999999999 -0.015250004907434373" rpy="-1.5707963267948966 -1.570796326794896 0" />
@@ -282,6 +308,7 @@
             <geometry>
                 <mesh filename="meshes/shield.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="orange" />
         </visual>
         <collision name="leg2_shield_collision">
             <origin xyz="-4.9074343344557295e-09 0.01999999999999988 0.018000000805759805" rpy="4.295254065614839e-32 1.5707963267948966 0" />
@@ -303,6 +330,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg3_MG996c_collision">
             <origin xyz="0.007283200121885147 -0.013930002111247354 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 -2.356194490192345" />
@@ -322,6 +350,7 @@
             <geometry>
                 <mesh filename="meshes/coxa_right.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg3_coxa_collision">
             <origin xyz="-0.03747666052846379 0.0374766605284586 0.0010000000000000054" rpy="0.0 -0.0 -2.356194490192345" />
@@ -341,6 +370,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg3_MG996f_collision">
             <origin xyz="0.004700000000000009 -0.010606605868281545 -0.01060660093166467" rpy="0.7853981633974483 -0.0 0.0" />
@@ -360,6 +390,7 @@
             <geometry>
                 <mesh filename="meshes/femur_right.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg3_femur_collision">
             <origin xyz="0.03040558825519259 0.030405593688384053 1.1102230246251566e-17" rpy="1.5707963267948966 -0.6108652381980152 2.356194490192345" />
@@ -379,6 +410,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg3_MG996t_collision">
             <origin xyz="-0.014283553979871896 0.028496405137322347 -0.009750004907434481" rpy="1.5707963267948966 -3.885780586188048e-16 -0.7853981633974485" />
@@ -398,6 +430,7 @@
             <geometry>
                 <mesh filename="meshes/tibia_right.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg3_tibia_collision">
             <origin xyz="-0.026162951764735497 0.0364867119275095 -0.004750004907434464" rpy="-2.356194490192345 -1.5707963267948963 0" />
@@ -417,6 +450,7 @@
             <geometry>
                 <mesh filename="meshes/shield.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="orange" />
         </visual>
         <collision name="leg3_shield_collision">
             <origin xyz="-4.907434458800708e-09 0.02687005691947199 -0.0014142087402563774" rpy="-1.5707963267948966 0.7853981633974483 -1.5707963267948966" />
@@ -438,6 +472,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg4_MG996c_collision">
             <origin xyz="0.013930002111251337 0.007283200121891475 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 -0.7853981633974483" />
@@ -457,6 +492,7 @@
             <geometry>
                 <mesh filename="meshes/coxa_left.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg4_coxa_collision">
             <origin xyz="0.03747666052846258 0.037476660528457446 0.0010000000000000054" rpy="3.141592653589793 -0.0 -0.7853981633974485" />
@@ -476,6 +512,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg4_MG996f_collision">
             <origin xyz="-0.04470000000000001 -0.010606606364855012 0.010606601301471806" rpy="-0.7853981633974485 -5.5511151231257815e-17 -1.1102230246251563e-16" />
@@ -495,6 +532,7 @@
             <geometry>
                 <mesh filename="meshes/femur_left.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg4_femur_collision">
             <origin xyz="-0.03040558825519396 0.03040559368838304 2.4424906541753444e-17" rpy="1.5707963267948963 -0.6108652381980147 0.7853981633974478" />
@@ -514,6 +552,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg4_MG996t_collision">
             <origin xyz="0.013576447026904397 -0.029203512090287608 -0.009749995092565564" rpy="1.5707963267948968 3.67395003908284e-16 2.3561944901923453" />
@@ -533,6 +572,7 @@
             <geometry>
                 <mesh filename="meshes/tibia_left.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg4_tibia_collision">
             <origin xyz="0.026162954811767863 0.03648670888047475 -0.004750004907434428" rpy="2.3561944901923457 -1.5707963267948963 0" />
@@ -552,6 +592,7 @@
             <geometry>
                 <mesh filename="meshes/shield.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="orange" />
         </visual>
         <collision name="leg4_shield_collision">
             <origin xyz="-4.907434423273571e-09 0.0014142173750247267 0.026870055554237843" rpy="1.5707963267948963 0.7853981633974475 1.5707963267948961" />
@@ -573,6 +614,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg5_MG996c_collision">
             <origin xyz="0.00469999999999998 0.015000000000000084 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 0.0" />
@@ -592,6 +634,7 @@
             <geometry>
                 <mesh filename="meshes/coxa_left.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg5_coxa_collision">
             <origin xyz="0.05299999999999999 -9.30026689001082e-17 0.0010000000000000054" rpy="3.141592653589793 -0.0 -1.5707963267948968" />
@@ -611,6 +654,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg5_MG996f_collision">
             <origin xyz="0.004700000000000006 9.880984919163893e-17 0.014999999999999982" rpy="-1.5707963267948968 -1.224646799147353e-16 1.5559211466421447e-32" />
@@ -630,6 +674,7 @@
             <geometry>
                 <mesh filename="meshes/femur_left.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg5_femur_collision">
             <origin xyz="0.0 0.04299999999999991 4.440892098500626e-18" rpy="1.5707963267948966 -0.6108652381980154 -1.8369701987210294e-16" />
@@ -649,6 +694,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg5_MG996t_collision">
             <origin xyz="0.030249998321848822 -0.011049999999999892 -0.009749995092565591" rpy="1.5707963267948966 -2.947193223346186e-16 -3.141592653589793" />
@@ -668,6 +714,7 @@
             <geometry>
                 <mesh filename="meshes/tibia_left.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg5_tibia_collision">
             <origin xyz="0.04429999832184882 0.007299999999999891 -0.01525000490743441" rpy="1.5707963267948963 -1.5707963267948963 0" />
@@ -687,6 +734,7 @@
             <geometry>
                 <mesh filename="meshes/shield.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="orange" />
         </visual>
         <collision name="leg5_shield_collision">
             <origin xyz="-4.907434369982866e-09 0.0200000000000001 0.018000000805759874" rpy="1.0845452443044073e-31 1.570796326794896 0" />
@@ -708,6 +756,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg6_MG996c_collision">
             <origin xyz="-0.00728320012188517 0.013930002111247335 -2.220446049250313e-18" rpy="3.141592653589793 -0.0 0.7853981633974483" />
@@ -727,6 +776,7 @@
             <geometry>
                 <mesh filename="meshes/coxa_left.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg6_coxa_collision">
             <origin xyz="0.037476660528463754 -0.0374766605284586 0.0010000000000000054" rpy="3.141592653589793 -0.0 -2.356194490192345" />
@@ -746,6 +796,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg6_MG996f_collision">
             <origin xyz="0.004700000000000009 0.01060660130146781 0.010606606364861283" rpy="-2.356194490192345 1.1102230246251565e-16 -1.1102230246251565e-16" />
@@ -765,6 +816,7 @@
             <geometry>
                 <mesh filename="meshes/femur_left.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg6_femur_collision">
             <origin xyz="0.030405593688389257 0.030405588255197725 1.5543122344752193e-17" rpy="1.5707963267948966 -0.6108652381980157 -0.7853981633974482" />
@@ -784,6 +836,7 @@
             <geometry>
                 <mesh filename="meshes/MG996.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg6_MG996t_collision">
             <origin xyz="0.02920351209029386 0.0135764470269004 -0.009749995092565538" rpy="1.5707963267948966 -1.110223024625156e-16 -2.356194490192345" />
@@ -803,6 +856,7 @@
             <geometry>
                 <mesh filename="meshes/tibia_left.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="black" />
         </visual>
         <collision name="leg6_tibia_collision">
             <origin xyz="0.036486708880480986 -0.02616295481176401 -0.004750004907434464" rpy="0.7853981633974483 -1.5707963267948966 0" />
@@ -822,6 +876,7 @@
             <geometry>
                 <mesh filename="meshes/shield.stl" scale="0.001 0.001 0.001" />
             </geometry>
+            <material name="orange" />
         </visual>
         <collision name="leg6_shield_collision">
             <origin xyz="-4.907434458800708e-09 0.02687005555423408 -0.001414217375018474" rpy="-1.5707963267948966 0.7853981633974482 -1.5707963267948966" />
