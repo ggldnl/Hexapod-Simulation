@@ -998,11 +998,11 @@
         <limit lower="-0.785398" upper="2.356194" effort="1000000" velocity="1000000" />
     </joint>
     <joint name="leg3_tibia_joint" type="revolute">
-        <origin xyz="-0.02268630999999999 0.01915077 0.06344155000000001" rpy="0.0 -0.0 0.0" />
+        <origin xyz="-0.02268630999999999 0.01915077 0.06344155000000001" rpy="0.0 0.0 0.0" />
         <parent link="leg3_femur" />
         <child link="leg3_MG996t" />
-        <axis xyz="0.707107 0.7071069999999999 -6.483768997034379e-17" />
-        <limit lower="-1.570796" upper="0.0" effort="1000000" velocity="1000000" />
+        <axis xyz="-0.707107 -0.707107 0.0" />
+        <limit lower="0.0" upper="1.570796" effort="1000000" velocity="1000000" />
     </joint>
     <joint name="leg3_MG996t_tibia" type="fixed">
         <origin xyz="0.017324120000000002 -0.0031112699999999906 -0.0052500000000000125" rpy="0.0 -3.050517397236834e-32 1.3465939511877539e-48" />
