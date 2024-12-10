@@ -1,296 +1,400 @@
-from pathlib import Path
-import pybullet as p
-import pybullet_data
-import time
-import math
-import json
+import plotly.graph_objects as go
+import numpy as np
 
+
+def rotation_x(theta):
+    return np.array([
+        [1, 0,              0,             0],
+        [0, np.cos(theta), -np.sin(theta), 0],
+        [0, np.sin(theta),  np.cos(theta), 0],
+        [0, 0,              0,             1]
+    ])
+
+def rotation_y(theta):
+    return np.array([
+        [np.cos(theta),  0, np.sin(theta), 0],
+        [0,              1, 0,             0],
+        [-np.sin(theta), 0, np.cos(theta), 0],
+        [0,              0, 0,             1]
+    ])
+
+def rotation_z(theta):
+    return np.array([
+        [np.cos(theta), -np.sin(theta), 0, 0],
+        [np.sin(theta),  np.cos(theta), 0, 0],
+        [0,              0,             1, 0],
+        [0,              0,             0, 1]
+    ])
+
+def rotation_matrix(angles):
+    roll, pitch, yaw = angles
+    return rotation_z(yaw) @ rotation_y(pitch) @ rotation_x(roll)
+
+def transformation_matrix(rotation, translation):
+    matrix = np.eye(4)
+    matrix[:3, :3] = rotation[:3, :3]
+    matrix[:3, 3] = translation
+    return matrix
 
 class Leg:
 
-    def __init__(self, config, invert=False):
+    def __init__(self, config, frame):
+        """
+        Initialize the Leg class.
+        """
+
         self.config = config
-        self.invert = invert
+        self.frame = frame
+
+        # Joint angles [coxa_angle, femur_angle, tibia_angle] (in radians)
+        self.joint_angles = [0.0, 0.0, 0.0]
+
+    def __str__(self):
+        return (f'Leg ( '
+                f'coxa={self.config["coxa"]["length"]}, '
+                f'femur={self.config["femur"]["length"]}, '
+                f'tibia={self.config["tibia"]["length"]} | '
+                f'alpha={round(self.joint_angles[0], 2)}, '
+                f'beta={round(self.joint_angles[1], 2)}, '
+                f'gamma={round(self.joint_angles[2], 2)})'
+            )
 
     def inverse_kinematics(self, target):
         """
-        Computes the inverse kinematics solution to reach the target point.
-        The solution is computed on the kinematic skeleton: it must be converted
-        accounting for the actual servo configuration.
+        Compute the joint angles to reach the target point (expressed in the leg's reference frame)
         """
-
         x, y, z = target
 
         c = self.config['coxa']['length']
         f = self.config['femur']['length']
         t = self.config['tibia']['length']
 
-        alpha = math.atan2(y, x)
+        # Coxa angle
+        alpha = np.arctan2(y, x)
+        r = np.sqrt(x ** 2 + y ** 2) - c
 
-        r = math.sqrt(x ** 2 + y ** 2) - c
-        d = math.sqrt(r ** 2 + z ** 2)
+        # Compute 2D planar IK for femur and tibia
+        d = np.sqrt(r ** 2 + z ** 2)  # Distance to the target
+        if d > (f + t):
+            raise ValueError("Target is out of reach!")
 
-        if d < abs(f - t):
-            raise ValueError(f"Target point {target} is too close to the leg's base.")
+        cos_angle2 = (f ** 2 + t ** 2 - d ** 2) / (2 * f * t)
+        gamma = np.arccos(cos_angle2) - np.pi
 
-        if d > f + t:
-            raise ValueError(f"Target point {target} is out of reach.")
+        cos_angle1 = (f ** 2 + d ** 2 - t ** 2) / (2 * f * d)
+        beta = np.arctan2(z, r) + np.arccos(cos_angle1)
 
-        b1 = math.atan2(z, r)
-        b2 = math.acos((f ** 2 + d ** 2 - t ** 2) / (2 * f * d))
-        beta = b1 + b2
+        self.joint_angles = [alpha, beta, gamma]
 
-        gamma = math.acos((f ** 2 + t ** 2 - d ** 2) / (2 * f * t)) - math.pi
-
-        return alpha, beta, gamma
-
-    @classmethod
-    def _map_range(cls, value, in_min, in_max, out_min, out_max):
+    def forward_kinematics(self):
         """
-        Map the value from the input range to the output range.
+        Computes the position of the end effector in the leg's reference frame.
         """
-        return (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
-
-    def translate(self, angles):
-        """
-        Translates the angles into servo ranges.
-        """
-
-        alpha, beta, gamma = angles
-
-        femur_offset = math.radians(25)
-        tibia_offset = math.radians(7.7)
-
-        alpha = self._map_range(alpha, 0, math.pi, -math.pi / 2, math.pi / 2)
-        beta = self._map_range(beta, -math.pi / 2, math.pi / 2, math.pi, 0) - femur_offset
-        gamma = self._map_range(gamma, -math.pi, 0, math.pi / 2, -math.pi / 2) + femur_offset + tibia_offset
-
-        return alpha, beta, gamma
-
-    def reach(self, target):
-        """
-        Computes the inverse kinematics to reach the target point and
-        maps the results to the joint ranges of the actual robot.
-        """
-
-        alpha, beta, gamma = self.inverse_kinematics(target)
-        alpha, beta, gamma = self.translate((alpha, beta, gamma))
-
-        c_min = math.radians(self.config['coxa']['range_min'])
-        c_max = math.radians(self.config['coxa']['range_max'])
-        f_min = math.radians(self.config['femur']['range_min'])
-        f_max = math.radians(self.config['femur']['range_max'])
-        t_min = math.radians(self.config['tibia']['range_min'])
-        t_max = math.radians(self.config['tibia']['range_max'])
-
-        if alpha < c_min or alpha > c_max:
-            raise ValueError(f"Computed coxa value [{alpha}] out of range {c_min}, {c_max}")
-
-        if beta < f_min or beta > f_max:
-            raise ValueError(f"Computed femur value [{beta}] out of range {f_min}, {f_max}")
-
-        if gamma < t_min or gamma > t_max:
-            raise ValueError(f"Computed tibia value [{gamma}] out of range {t_min}, {t_max}")
-
-        # TODO this will require further investigation
-        if self.invert:
-            alpha *= -1
-            beta *= -1
-            gamma *= -1
-
-        return alpha, beta, gamma
-
-    def forward_kinematics(self, angles):
-        """
-        Computes the forward kinematics based on joint angles (alpha, beta, gamma).
-        Returns the 3D position of the end effector.
-        """
-
-        alpha, beta, gamma = angles
 
         c = self.config['coxa']['length']
         f = self.config['femur']['length']
         t = self.config['tibia']['length']
 
-        # Position of the femur base relative to the body
-        x_coxa = c * math.cos(alpha)
-        y_coxa = c * math.sin(alpha)
-        z_coxa = 0
+        alpha, beta, gamma = self.joint_angles
 
-        # Effective angle for the femur and tibia in the vertical plane
-        beta_eff = beta
-        gamma_eff = gamma
+        coxa_x = c * np.cos(alpha)
+        coxa_y = c * np.sin(alpha)
+        coxa_z = 0
 
-        # Position of the femur end (tibia base)
-        x_femur = x_coxa + f * math.cos(beta_eff) * math.cos(alpha)
-        y_femur = y_coxa + f * math.cos(beta_eff) * math.sin(alpha)
-        z_femur = z_coxa + f * math.sin(beta_eff)
+        femur_x = coxa_x + f * np.cos(alpha) * np.cos(beta)
+        femur_y = coxa_y + f * np.sin(alpha) * np.cos(beta)
+        femur_z = coxa_z + f * np.sin(beta)
 
-        # Position of the tibia end (foot)
-        x_tibia = x_femur + t * math.cos(beta_eff + gamma_eff) * math.cos(alpha)
-        y_tibia = y_femur + t * math.cos(beta_eff + gamma_eff) * math.sin(alpha)
-        z_tibia = z_femur + t * math.sin(beta_eff + gamma_eff)
+        tibia_x = femur_x + t * np.cos(alpha) * np.cos(beta + gamma)
+        tibia_y = femur_y + t * np.sin(alpha) * np.cos(beta + gamma)
+        tibia_z = femur_z + t * np.sin(beta + gamma)
 
-        return x_tibia, y_tibia, z_tibia
+        return tibia_x, tibia_y, tibia_z
+
+    def plot(self):
+        """
+        Plot the leg using Plotly.
+        """
+
+        c = self.config['coxa']['length']
+        f = self.config['femur']['length']
+        t = self.config['tibia']['length']
+
+        alpha, beta, gamma = self.joint_angles
+
+        origin_x = 0
+        origin_y = 0
+        origin_z = 0
+
+        coxa_x = c * np.cos(alpha)
+        coxa_y = c * np.sin(alpha)
+        coxa_z = 0
+
+        femur_x = coxa_x + f * np.cos(alpha) * np.cos(beta)
+        femur_y = coxa_y + f * np.sin(alpha) * np.cos(beta)
+        femur_z = coxa_z + f * np.sin(beta)
+
+        tibia_x = femur_x + t * np.cos(alpha) * np.cos(beta + gamma)
+        tibia_y = femur_y + t * np.sin(alpha) * np.cos(beta + gamma)
+        tibia_z = femur_z + t * np.sin(beta + gamma)
+
+        x_coords = [origin_x, coxa_x, femur_x, tibia_x]
+        y_coords = [origin_y, coxa_y, femur_y, tibia_y]
+        z_coords = [origin_z, coxa_z, femur_z, tibia_z]
+
+        # Create 3D scatter and line plot
+        fig = go.Figure()
+
+        # Add leg segments
+        fig.add_trace(go.Scatter3d(
+            x=x_coords, y=y_coords, z=z_coords,
+            mode='lines+markers',
+            marker=dict(size=6, color='blue'),
+            line=dict(color='red', width=4),
+            name='Hexapod Leg'
+        ))
+
+        # Set equal aspect ratio
+        fig.update_layout(
+            title="Hexapod Leg with Joint Angles",
+            scene=dict(
+                xaxis_title="X-axis",
+                yaxis_title="Y-axis",
+                zaxis_title="Z-axis",
+                aspectmode="cube",
+                xaxis=dict(range=[-100, 100]),
+                yaxis=dict(range=[-100, 100]),
+                zaxis=dict(range=[-100, 100]),
+            ),
+            margin=dict(l=0, r=0, b=0, t=40),
+        )
+
+        fig.show()
 
 
 class Hexapod:
 
-    def __init__(self, config, name='hexapod'):
+    def __init__(self, config, silent_fail=True):
+        self.config = config
+        self.silent_fail = silent_fail
 
-        # Read the config if a Path is given
-        if isinstance(config, Path):
-            with open(config, 'r') as f:
-                config = json.load(f)
-
-        # Select the particular hexapod (a config file can hold more than one of them)
-        config = config[name]
-
-        self.legs = [Leg(config[f'leg_{i + 1}'], invert=(i>2)) for i in range(6)]
-        self.coxa_joints = [
-            (
-                config[f'leg_{i + 1}']['joint']['x'],
-                config[f'leg_{i + 1}']['joint']['y'],
-                config[f'leg_{i + 1}']['joint']['z']
-            ) for i in range(6)
-        ]
-
-        # Position and orientation of the main body
         self.position = [0, 0, 0]
         self.orientation = [0, 0, 0]
+        self.body_frame = transformation_matrix(rotation_matrix(self.orientation), self.position)
 
-        self.current_angles = [[0, 0, 0] for _ in range(6)]  # Current angles for all legs
-        self.target_angles = [[0, 0, 0] for _ in range(6)]  # Target angles for all legs
+        self.legs = []
+        for leg in config:
 
-    def stand(self, height, x_offset=0, y_offset=120):
+            x_off = config[leg]['T']['x']
+            y_off = config[leg]['T']['y']
+            z_off = config[leg]['T']['z']
+            position = [x_off, y_off, z_off]
+
+            roll = config[leg]['T']['roll']
+            pitch = config[leg]['T']['pitch']
+            yaw = config[leg]['T']['yaw']
+            orientation = [roll, pitch, yaw]
+
+            leg_frame = transformation_matrix(rotation_matrix(orientation), position)
+            self.legs.append(Leg(config[leg], leg_frame))
+
+    def __iter__(self):
+        return iter(self.legs)
+
+    def set_body_pose(self, position, orientation):
         """
-        Computes the target angles to the stand position.
-        All offsets are expressed in mm.
-        """
-
-        targets = [
-            (x_offset, y_offset, -height) for _ in range(6)
-        ]
-
-        for i, (leg, target) in enumerate(zip(self.legs, targets)):
-            self.target_angles[i] = [*leg.reach(target)]
-
-    def update(self, speed=0.1, eps=1e-3):
-
-        if not self.is_at_target():
-
-            for i in range(6):
-
-                # Interpolate each joint (Alpha, Beta, Gamma)
-                for j in range(3):
-
-                    current = self.current_angles[i][j]
-                    target = self.target_angles[i][j]
-
-                    if abs(current - target) > eps:
-                        step = speed * (target - current)
-                        self.current_angles[i][j] += step
-
-                        # Clamp to prevent overshooting
-                        if abs(self.current_angles[i][j] - target) < eps:
-                            self.current_angles[i][j] = target
-
-    def is_at_target(self, eps=1e-3):
-        """
-        Checks if all legs have reached their target angles.
+        Set a new body pose and update the legs such that they keep the
+        end effector in the same position as before.
         """
 
-        for current, target in zip(self.current_angles, self.target_angles):
-            if any(abs(c - t) > eps for c, t in zip(current, target)):
-                return False
-            return True
+        new_body_frame = transformation_matrix(rotation_matrix(orientation), position)
 
-class PyBulletController:
+        # Compute the new joint values to reach the same point
+        for leg in self.legs:
 
-    def __init__(self, hexapod, joint_mapping):
-        self.hexapod = hexapod
-        self.joint_mapping = joint_mapping
+            # Compute the current end-effector position in the global frame
+            ee_position_global = self.body_frame @ leg.frame @ np.array([*leg.forward_kinematics(), 1])
 
-    def step(self, **kwargs):
+            # Update the leg's frame based on the new body frame
+            leg.frame = new_body_frame @ leg.frame
 
-        self.hexapod.update(**kwargs)
+            # Transform the end effector to the new leg frame
+            ee_position_leg_frame = np.linalg.inv(self.body_frame) @ np.linalg.inv(leg.frame) @ ee_position_global
+            ee_position_leg_frame = ee_position_leg_frame[:3]
 
-        for i, leg in enumerate(self.hexapod.legs):
+            # Compute the new joint angles
+            leg.inverse_kinematics(ee_position_leg_frame)
 
-            # Take the mapping for the respective leg
-            leg = self.joint_mapping[f'leg_{i + 1}']
-            coxa_joint = leg['coxa_joint']
-            femur_joint = leg['femur_joint']
-            tibia_joint = leg['tibia_joint']
+        # Update body pose
+        self.position = position
+        self.orientation = orientation
+        self.body_frame = new_body_frame
 
-            # Take the current angle for the respective leg
-            coxa_angle, femur_angle, tibia_angle = self.hexapod.current_angles[i]
+    def forward_kinematics(self):
+        """
+        Returns the current end effector positions expressed in the respective leg frame.
+        """
 
-            # Move the joints to the target position
-            p.setJointMotorControl2(robotID, coxa_joint, p.POSITION_CONTROL, targetPosition=coxa_angle)
-            p.setJointMotorControl2(robotID, femur_joint, p.POSITION_CONTROL, targetPosition=femur_angle)
-            p.setJointMotorControl2(robotID, tibia_joint, p.POSITION_CONTROL, targetPosition=tibia_angle)
+        leg_ee_positions = []
+        for leg in self.legs:
+            leg_ee_positions.append(leg.forward_kinematics())
+
+        return leg_ee_positions
+
+    def inverse_kinematics(self, targets):
+        """
+        Compute the joint angles, for each leg, to reach the target point.
+        This keeps the body pose unchanged.
+        """
+
+        for leg, target in zip(self.legs, targets):
+            leg.inverse_kinematics(target)
+
+    def plot(self, additional_geometries=None):
+        """
+        Plot the Hexapod body and legs using Plotly.
+        """
+
+        fig = go.Figure()
+
+        if additional_geometries is None:
+            additional_geometries = []
+
+        # Plot the body attachment points
+        body_points = np.array([leg.frame[:3, 3] for leg in self.legs])
+        body_points = np.vstack((body_points, body_points[0]))  # Close the loop
+
+        fig.add_trace(go.Scatter3d(
+            x=body_points[:, 0], y=body_points[:, 1], z=body_points[:, 2],
+            mode='lines+markers',
+            name='Body',
+            marker=dict(size=5, color='blue'),
+            line=dict(width=4, color='blue')
+        ))
+
+        # Plot each leg
+        for i, leg in enumerate(self.legs):
+
+            # Position of the attachment point in world frame
+            attachment_p = leg.frame[:3, 3]
+
+            c = leg.config['coxa']['length']
+            f = leg.config['femur']['length']
+            t = leg.config['tibia']['length']
+
+            alpha, beta, gamma = leg.joint_angles
+
+            coxa_x = c * np.cos(alpha)
+            coxa_y = c * np.sin(alpha)
+            coxa_z = 0
+            coxa_p = np.array([coxa_x, coxa_y, coxa_z, 1])
+            coxa_p = leg.frame @ coxa_p
+
+            femur_x = coxa_x + f * np.cos(alpha) * np.cos(beta)
+            femur_y = coxa_y + f * np.sin(alpha) * np.cos(beta)
+            femur_z = coxa_z + f * np.sin(beta)
+            femur_p = np.array([femur_x, femur_y, femur_z, 1])
+            femur_p = leg.frame @ femur_p
+
+            tibia_x = femur_x + t * np.cos(alpha) * np.cos(beta + gamma)
+            tibia_y = femur_y + t * np.sin(alpha) * np.cos(beta + gamma)
+            tibia_z = femur_z + t * np.sin(beta + gamma)
+            tibia_p = np.array([tibia_x, tibia_y, tibia_z, 1])
+            tibia_p = leg.frame @ tibia_p
+
+            # Position of the coxa endpoint in world frame
+            fig.add_trace(go.Scatter3d(
+                x=[attachment_p[0], coxa_p[0], femur_p[0], tibia_p[0]],
+                y=[attachment_p[1], coxa_p[1], femur_p[1], tibia_p[1]],
+                z=[attachment_p[2], coxa_p[2], femur_p[2], tibia_p[2]],
+                mode='lines+markers',
+                name=f'leg_{i}',
+                marker=dict(size=4, color='red'),
+                line=dict(width=3, color='red')
+            ))
+
+        # Plot additional geometries
+        for geom in additional_geometries:
+            if isinstance(geom, np.ndarray):
+                if geom.shape[1] == 3:  # Assume 3D points
+                    fig.add_trace(go.Scatter3d(
+                        x=geom[:, 0],
+                        y=geom[:, 1],
+                        z=geom[:, 2],
+                        mode='markers',
+                        name='Additional Points',
+                        marker=dict(size=5, color='green')
+                    ))
+                elif geom.shape[0] == 2 and geom.shape[1] == 3:  # Line represented by two points
+                    fig.add_trace(go.Scatter3d(
+                        x=geom[:, 0],
+                        y=geom[:, 1],
+                        z=geom[:, 2],
+                        mode='lines',
+                        name='Additional Line',
+                        line=dict(width=2, color='purple')
+                    ))
+                elif geom.ndim == 3 and geom.shape[2] == 3:  # Multiple lines
+                    for line in geom:
+                        fig.add_trace(go.Scatter3d(
+                            x=line[:, 0],
+                            y=line[:, 1],
+                            z=line[:, 2],
+                            mode='lines',
+                            name='Additional Lines',
+                            line=dict(width=2, color='purple')
+                        ))
+                else:
+                    raise ValueError(f"Unsupported geometry shape: {geom.shape}")
+            else:
+                raise TypeError(f"Unsupported geometry type: {type(geom)}")
+
+        # Set plot layout
+        fig.update_layout(
+            scene=dict(
+                xaxis_title='X',
+                yaxis_title='Y',
+                zaxis_title='Z',
+                aspectmode='data',
+            ),
+            title='Hexapod Visualization',
+        )
+
+        # Show the plot
+        fig.show()
 
 
 if __name__ == '__main__':
 
-    # --------------------------------- PyBullet --------------------------------- #
+    import json
+    from pathlib import Path
 
-    # Connect to physics server
-    physicsClient = p.connect(p.GUI)
+    # Read the config
+    path = Path('hexapod.json')
+    with open(path) as f:
+        config = json.load(f)
 
-    # Load additional data and set gravity
-    p.setAdditionalSearchPath(pybullet_data.getDataPath())
-    p.setGravity(0, 0, -10)
+    # Create a Hexapod object
+    name = 'hexapod'
+    hexapod = Hexapod(config[name])
 
-    # Load plane and robot URDF files
-    planeId = p.loadURDF("plane.urdf")
-    cubeStartPos = [0, 0, 0]
-    cubeStartOrientation = p.getQuaternionFromEuler([0, 0, 0])
-    robotID = p.loadURDF("hexapod.urdf", cubeStartPos, cubeStartOrientation, flags=p.URDF_USE_INERTIA_FROM_FILE)
+    # Set the target points each leg has to reach (in leg frames)
+    targets = [
+        [100, 0, -50],
+        [100, 0, -50],
+        [100, 0, -50],
+        [100, 0, -50],
+        [100, 0, -50],
+        [100, 0, -50],
+    ]
+    hexapod.inverse_kinematics(targets)
+    hexapod.plot()
 
-    # List the revolute joints
-    revolute_joints = []
-    num_joints = p.getNumJoints(robotID)
-    for joint_index in range(num_joints):
-        joint_info = p.getJointInfo(robotID, joint_index)
-        joint_type = joint_info[2]  # Joint type is the third element in joint_info tuple
-        if joint_type == p.JOINT_REVOLUTE:
-            revolute_joints.append(joint_index)
-            print(f"Joint {joint_index} is revolute: {joint_info[1].decode('utf-8')}")
+    # Change body pose
+    hexapod.set_body_pose(
+        [0, 0, 0],
+        [np.deg2rad(10), np.deg2rad(10), np.deg2rad(10)]
+    )
 
-    # ---------------------------------- Hexapod --------------------------------- #
-
-    config_path = Path('hexapod.json')
-    hexapod = Hexapod(config_path)
-
-    joint_mapping = {
-        f'leg_{i + 1}': {
-            'coxa_joint': revolute_joints[0 + i * 3],
-            'femur_joint': revolute_joints[1 + i * 3],
-            'tibia_joint': revolute_joints[2 + i * 3]
-        } for i in range(6)
-    }
-
-    controller = PyBulletController(hexapod, joint_mapping)
-
-    # ------------------------------ Simulation loop ----------------------------- #
-
-    try:
-
-        hexapod.stand(height=80)
-
-        for i in range(10000):
-
-            delta_time = 1. / 240.
-
-            # Step the simulation
-            p.stepSimulation()
-
-            controller.step(speed=0.01)
-
-            time.sleep(delta_time)
-
-    finally:
-        # Disconnect from the simulation when done
-        p.disconnect()
+    # Plot the robot
+    hexapod.plot()
