@@ -1,4 +1,4 @@
-name: hexapod
+name: hexapod-sim
 channels:
   - conda-forge
 dependencies:
