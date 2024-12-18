@@ -1,0 +1,154 @@
+{
+  "hexapod": {
+    "leg_1": {
+      "joint": {
+        "x": 60.607,
+        "y": 80.607,
+        "z": 0.0
+      },
+      "coxa": {
+        "pin": 0,
+        "range_min": -90,
+        "range_max": 90,
+        "length": 42
+      },
+      "femur": {
+        "pin": 1,
+        "range_min": -45,
+        "range_max": 135,
+        "length": 70
+      },
+      "tibia": {
+        "pin": 2,
+        "range_min": 0,
+        "range_max": 90,
+        "length": 90
+      }
+    },
+    "leg_2": {
+      "joint": {
+        "x": 80.5,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "coxa": {
+        "pin": 3,
+        "range_min": -90,
+        "range_max": 90,
+        "length": 42
+      },
+      "femur": {
+        "pin": 4,
+        "range_min": -45,
+        "range_max": 135,
+        "length": 70
+      },
+      "tibia": {
+        "pin": 5,
+        "range_min": 0,
+        "range_max": 90,
+        "length": 90
+      }
+    },
+    "leg_3": {
+      "joint": {
+        "x": 60.607,
+        "y": -80.607,
+        "z": 0.0
+      },
+      "coxa": {
+        "pin": 6,
+        "range_min": -90,
+        "range_max": 90,
+        "length": 42
+      },
+      "femur": {
+        "pin": 7,
+        "range_min": -45,
+        "range_max": 135,
+        "length": 70
+      },
+      "tibia": {
+        "pin": 8,
+        "range_min": 0,
+        "range_max": 90,
+        "length": 90
+      }
+    },
+    "leg_4": {
+      "joint": {
+        "x": -60.607,
+        "y": -80.607,
+        "z": 0.0
+      },
+      "coxa": {
+        "pin": 9,
+        "range_min": -90,
+        "range_max": 90,
+        "length": 42
+      },
+      "femur": {
+        "pin": 10,
+        "range_min": -45,
+        "range_max": 135,
+        "length": 70
+      },
+      "tibia": {
+        "pin": 11,
+        "range_min": 0,
+        "range_max": 90,
+        "length": 90
+      }
+    },
+    "leg_5": {
+      "joint": {
+        "x": -80.5,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "coxa": {
+        "pin": 12,
+        "range_min": -90,
+        "range_max": 90,
+        "length": 42
+      },
+      "femur": {
+        "pin": 13,
+        "range_min": -45,
+        "range_max": 135,
+        "length": 70
+      },
+      "tibia": {
+        "pin": 14,
+        "range_min": 0,
+        "range_max": 90,
+        "length": 90
+      }
+    },
+    "leg_6": {
+      "joint": {
+        "x": -60.607,
+        "y": 80.607,
+        "z": 0.0
+      },
+      "coxa": {
+        "pin": 15,
+        "range_min": -90,
+        "range_max": 90,
+        "length": 42
+      },
+      "femur": {
+        "pin": 16,
+        "range_min": -45,
+        "range_max": 135,
+        "length": 70
+      },
+      "tibia": {
+        "pin": 17,
+        "range_min": 0,
+        "range_max": 90,
+        "length": 90
+      }
+    }
+  }
+}
