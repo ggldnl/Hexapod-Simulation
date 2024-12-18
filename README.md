@@ -28,4 +28,6 @@ For a complete overview of the project, refer to the [main Hexapod repository](h
 - [ ] Add documentation on how to interpret simulation results.
 - [ ] Provide videos of the simulation.
 
+## Contribution
+
 Feel free to contribute by opening issues or submitting pull requests. For further information, check out the [main Hexapod repository](https://github.com/ggldnl/Hexapod).
