@@ -26,6 +26,7 @@ For a complete overview of the project, refer to the [main Hexapod repository](h
 ## TODO
 
 - [ ] Add documentation on how to interpret simulation results.
+- [ ] Provide a way to select gait strategy from terminal.
 - [ ] Provide videos of the simulation.
 
 ## Contribution
