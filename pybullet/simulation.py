@@ -3,6 +3,7 @@ import numpy as np
 import pybullet as p
 import pybullet_utils.bullet_client as bc
 import pybullet_data
+from pathlib import Path
 import time
 
 from hexapod_controller import HexapodController
@@ -40,7 +41,10 @@ if __name__ == '__main__':
     planeId = physics.loadURDF("plane.urdf")
     cubeStartPos = [0, 0, 0]
     cubeStartOrientation = p.getQuaternionFromEuler([0, 0, 0])
-    robotID = physics.loadURDF("../hexapod.urdf", cubeStartPos, cubeStartOrientation, flags=p.URDF_USE_INERTIA_FROM_FILE)
+
+    repo_dir = Path(__file__).parent.parent
+    urdf_file = Path(repo_dir, 'URDF/hexapod.urdf')
+    robotID = physics.loadURDF(str(urdf_file), cubeStartPos, cubeStartOrientation, flags=p.URDF_USE_INERTIA_FROM_FILE)
 
     # List the revolute joints
     revolute_joints = []
