@@ -1,15 +1,45 @@
-import numpy as np
-
 import pybullet as p
 import pybullet_utils.bullet_client as bc
 import pybullet_data
+
 from pathlib import Path
+import numpy as np
+import argparse
+import json
 import time
 
-from hexapod_controller import HexapodController
+from simulation.controller import Controller
+# from controllers.periodic_signal_controller import Controller
+from hexapod import Hexapod
 
 
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description="PyBullet simulation.")
+    parser.add_argument("-g", "--gait", type=str, default='tri', help="Gait (tri/wave/ripple)")
+    parser.add_argument("-u", "--URDF", type=str, default='data/URDF/hexapod.urdf', help="Path to the robot's URDF")
+    parser.add_argument("-c", "--config", type=str, default='data/hexapod.json', help="Path to the robot's configuration file")
+    parser.add_argument('-n', '--name', type=str, default='hexapod', help="Name of the robot in the config")
+    parser.add_argument('-d', '--dt', type=float, default=0.02, help="Time delta for update (default=0.02=50Hz)")
+
+    args = parser.parse_args()
+
+    # -------------------------------- Controller -------------------------------- #
+
+    # """
+    # Read the JSON
+    with open(args.config) as f:
+        config = json.load(f)
+
+    # Create a Hexapod object
+    hexapod = Hexapod(config[args.name])
+    controller = Controller(hexapod)
+
+    """
+    ctrl = [1, 0, 0.5, 0.25, 0.25, 0.5, 1, 0.5, 0.5, 0.25, 0.75, 0.5, 1, 0, 0.5, 0.25, 0.25, 0.5, 1, 0, 0.5, 0.25, 0.75,
+            0.5, 1, 0.5, 0.5, 0.25, 0.25, 0.5, 1, 0, 0.5, 0.25, 0.75, 0.5]
+    controller = Controller(ctrl)
+    """
 
     # --------------------------------- PyBullet --------------------------------- #
 
@@ -43,7 +73,8 @@ if __name__ == '__main__':
     cubeStartOrientation = p.getQuaternionFromEuler([0, 0, 0])
 
     repo_dir = Path(__file__).parent.parent
-    urdf_file = Path(repo_dir, 'URDF/hexapod.urdf')
+    # urdf_file = Path(repo_dir, '../data/URDF/hexapod.urdf')
+    urdf_file = Path(repo_dir, args.URDF)
     robotID = physics.loadURDF(str(urdf_file), cubeStartPos, cubeStartOrientation, flags=p.URDF_USE_INERTIA_FROM_FILE)
 
     # List the revolute joints
@@ -67,48 +98,40 @@ if __name__ == '__main__':
 
     # ------------------------------ Simulation loop ----------------------------- #
 
-    ctrl = [1, 0, 0.5, 0.25, 0.25, 0.5, 1, 0.5, 0.5, 0.25, 0.75, 0.5, 1, 0, 0.5, 0.25, 0.25, 0.5, 1, 0, 0.5, 0.25, 0.75,
-            0.5, 1, 0.5, 0.5, 0.25, 0.25, 0.5, 1, 0, 0.5, 0.25, 0.75, 0.5]
-    controller = HexapodController(ctrl)
-
     try:
 
         t = 0.0
-        dt = 1. / 240.
+        # dt = 1. / 240.
+        dt = args.dt
+
+        x, y, z = 0, 0, 0
+        roll, pitch, yaw = 10, 10, 10
+        body_pose_set = False
+
+        print(f'Standing...')
+        controller.stand(2)
 
         while True:
 
-            # Step the simulation
+            # Step the simulations
             physics.stepSimulation()
 
-            # Precomputes trajectories for all the servos (coxa, femur, tibia)
-            # given the parameters
-            joint_angles = controller.step(t)
+            if controller.is_done() and not body_pose_set:
+                print(f'Robot ready, setting body pose...')
+                controller.set_body_pose(
+                    [x, y, z],
+                    [np.deg2rad(roll), np.deg2rad(pitch), np.deg2rad(yaw)],
+                    2
+                )
+                body_pose_set = True
 
-            # Reshape to 6x3
-            joint_angles = [
-                [
-                    joint_angles[0 + i * 3],
-                    joint_angles[1 + i * 3],
-                    joint_angles[2 + i * 3],
-                ] for i in range(6)
-            ]
+            # Get the joint angles
+            joint_angles = controller.step(dt)
 
             for i in range(6):
 
                 joints = joint_mapping[i]
                 angles = joint_angles[i]
-
-                # Apply offsets
-                offset = np.deg2rad(25)
-                angles[1] -= offset
-                angles[2] += offset
-
-                angles[1] += np.pi / 2
-
-                # Mirror
-                if i > 2:
-                    angles[1] *= -1
 
                 # Move the joints to the target position
                 p.setJointMotorControl2(robotID, joints['coxa_joint'], p.POSITION_CONTROL, targetPosition=angles[0])
@@ -121,5 +144,5 @@ if __name__ == '__main__':
 
     finally:
 
-        # Disconnect from the simulation when done
+        # Disconnect from the simulations when done
         physics.disconnect()

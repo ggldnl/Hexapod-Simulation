@@ -22,8 +22,12 @@ For a complete overview of the project, refer to the [main Hexapod repository](h
 
 1. Run the simulation script:
    ```bash
-   python pybullet/simulation.py
+   python simulation/simulation.py
    ```
+
+## 📝 Notes
+
+This simulation is based on early-stage code and serves as a prototype. A polished version of the same code will be hosted on the [Controller repository](https://github.com/ggldnl/Hexapod-Controller). 
 
 ## TODO
 
