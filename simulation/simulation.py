@@ -8,8 +8,7 @@ import argparse
 import json
 import time
 
-from simulation.controller import Controller
-# from controllers.periodic_signal_controller import Controller
+from controller import Controller
 from hexapod import Hexapod
 
 
