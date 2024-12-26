@@ -155,6 +155,7 @@
             </geometry>
         </collision>
     </link>
+    <!--
     <link name="leg1_shield">
         <inertial>
             <origin xyz="0.0079568594346555 0.02272417345231009 -0.022724629731227283" rpy="0.0 -0.0 0.0" />
@@ -175,6 +176,7 @@
             </geometry>
         </collision>
     </link>
+    -->
 
     <!--Leg 2 links-->
     <link name="leg2_MG996c">
@@ -297,6 +299,7 @@
             </geometry>
         </collision>
     </link>
+    <!--
     <link name="leg2_shield">
         <inertial>
             <origin xyz="0.007956859434655553 -3.214487111319331e-07 -0.032137151919441255" rpy="0.0 -0.0 0.0" />
@@ -317,6 +320,7 @@
             </geometry>
         </collision>
     </link>
+    -->
 
     <!--Leg 3 links-->
     <link name="leg3_MG996c">
@@ -439,6 +443,7 @@
             </geometry>
         </collision>
     </link>
+    <!--
     <link name="leg3_shield">
         <inertial>
             <origin xyz="0.007956859434655428 -0.022724626684197596 -0.022724166499337298" rpy="-2.7369110631344083e-48 6.842277657836022e-49 -6.842277657836022e-49" />
@@ -459,6 +464,7 @@
             </geometry>
         </collision>
     </link>
+    -->
 
     <!--Leg 4 links-->
     <link name="leg4_MG996c">
@@ -581,6 +587,7 @@
             </geometry>
         </collision>
     </link>
+    <!--
     <link name="leg4_shield">
         <inertial>
             <origin xyz="0.007956859434655482 0.0227241751341057 -0.02272462804943171" rpy="0.0 6.842277657836022e-49 0.0" />
@@ -601,6 +608,7 @@
             </geometry>
         </collision>
     </link>
+    -->
 
     <!--Leg 5 links-->
     <link name="leg5_MG996c">
@@ -723,6 +731,7 @@
             </geometry>
         </collision>
     </link>
+    <!--
     <link name="leg5_shield">
         <inertial>
             <origin xyz="0.007956859434655482 -3.214487109154396e-07 -0.03213715191944118" rpy="0.0 -0.0 0.0" />
@@ -743,6 +752,7 @@
             </geometry>
         </collision>
     </link>
+    -->
 
     <!--Leg 6 links-->
     <link name="leg6_MG996c">
@@ -865,6 +875,7 @@
             </geometry>
         </collision>
     </link>
+    <!--
     <link name="leg6_shield">
         <inertial>
             <origin xyz="0.007956859434655428 -0.022724628049435473 -0.02272417513409943" rpy="0.0 -0.0 0.0" />
@@ -885,6 +896,7 @@
             </geometry>
         </collision>
     </link>
+    -->
 
     <!--Leg 1 joints-->
     <joint name="base_link_leg1_MG996c" type="fixed">
@@ -916,18 +928,20 @@
         <parent link="leg1_femur" />
         <child link="leg1_MG996t" />
         <axis xyz="0.707107 0.707107 3.925232361368103e-17" />
-        <limit lower="0.0" upper="1.570796" effort="1000000" velocity="1000000" />
+        <limit lower="-3.14159" upper="3.14159" effort="1000000" velocity="1000000" />
     </joint>
     <joint name="leg1_MG996t_tibia" type="fixed">
         <origin xyz="0.0024041599999999976 -0.018031230000000013 0.005250000000000004" rpy="-3.141592653589793 -5.55111512312578e-17 0.0" />
         <parent link="leg1_MG996t" />
         <child link="leg1_tibia" />
     </joint>
+    <!--
     <joint name="leg1_tibia_shield" type="fixed">
         <origin xyz="-0.07392547999999997 -0.05794487000000002 0.02125" rpy="-3.222902565236662e-64 -1.5707963267948966 0" />
         <parent link="leg1_tibia" />
         <child link="leg1_shield" />
     </joint>
+    -->
 
     <!--Leg 2 joints-->
     <joint name="base_link_leg2_MG996c" type="fixed">
@@ -959,18 +973,20 @@
         <parent link="leg2_femur" />
         <child link="leg2_MG996t" />
         <axis xyz="0.0 1.0 0.0" />
-        <limit lower="0.0" upper="1.570796" effort="1000000" velocity="1000000" />
+        <limit lower="-3.14159" upper="3.14159" effort="1000000" velocity="1000000" />
     </joint>
     <joint name="leg2_MG996t_tibia" type="fixed">
         <origin xyz="0.014450000000000003 -0.01105 -0.005250000000000004" rpy="-3.141592653589793 -1.2516661846134429e-49 0.0" />
         <parent link="leg2_MG996t" />
         <child link="leg2_tibia" />
     </joint>
+    <!--
     <joint name="leg2_tibia_shield" type="fixed">
         <origin xyz="-0.09324641 0.0113 0.010749999999999994" rpy="-0.0 -1.5707963267948966 0" />
         <parent link="leg2_tibia" />
         <child link="leg2_shield" />
     </joint>
+    -->
 
     <!--Leg 3 joints-->
     <joint name="base_link_leg3_MG996c" type="fixed">
@@ -1002,18 +1018,20 @@
         <parent link="leg3_femur" />
         <child link="leg3_MG996t" />
         <axis xyz="-0.707107 -0.707107 0.0" />
-        <limit lower="0.0" upper="1.570796" effort="1000000" velocity="1000000" />
+        <limit lower="-3.14159" upper="3.14159" effort="1000000" velocity="1000000" />
     </joint>
     <joint name="leg3_MG996t_tibia" type="fixed">
         <origin xyz="0.017324120000000002 -0.0031112699999999906 -0.0052500000000000125" rpy="0.0 -3.050517397236834e-32 1.3465939511877539e-48" />
         <parent link="leg3_MG996t" />
         <child link="leg3_tibia" />
     </joint>
+    <!--
     <joint name="leg3_tibia_shield" type="fixed">
         <origin xyz="-0.05794486000000001 0.07392547999999997 0.02125" rpy="4.930380657631325e-32 -1.5707963267948966 0" />
         <parent link="leg3_tibia" />
         <child link="leg3_shield" />
     </joint>
+    -->
 
     <!--Leg 4 joints-->
     <joint name="base_link_leg4_MG996c" type="fixed">
@@ -1045,18 +1063,20 @@
         <parent link="leg4_femur" />
         <child link="leg4_MG996t" />
         <axis xyz="-0.7071069999999999 -0.7071069999999999 -3.228531091625886e-17" />
-        <limit lower="0.0" upper="1.570796" effort="1000000" velocity="1000000" />
+        <limit lower="-3.14159" upper="3.14159" effort="1000000" velocity="1000000" />
     </joint>
     <joint name="leg4_MG996t_tibia" type="fixed">
         <origin xyz="-0.018031230000000013 0.0024041600000000154 0.005250000000000004" rpy="-3.141592653589793 -5.592845782213225e-17 -4.850773625799853e-32" />
         <parent link="leg4_MG996t" />
         <child link="leg4_tibia" />
     </joint>
+    <!--
     <joint name="leg4_tibia_shield" type="fixed">
         <origin xyz="0.05794487000000002 0.07392548000000002 0.02124999999999999" rpy="3.141592653589793 -1.5707963267948966 0" />
         <parent link="leg4_tibia" />
         <child link="leg4_shield" />
     </joint>
+    -->
 
     <!--Leg 5 joints-->
     <joint name="base_link_leg5_MG996c" type="fixed">
@@ -1088,18 +1108,20 @@
         <parent link="leg5_femur" />
         <child link="leg5_MG996t" />
         <axis xyz="0.0 -1.0 2.229123157024303e-33" />
-        <limit lower="0.0" upper="1.570796" effort="1000000" velocity="1000000" />
+        <limit lower="-3.14159" upper="3.14159" effort="1000000" velocity="1000000" />
     </joint>
     <joint name="leg5_MG996t_tibia" type="fixed">
         <origin xyz="-0.014450000000000003 -0.01105 -0.005250000000000004" rpy="3.141592653589793 -3.627598386426413e-33 8.086363567567113e-66" />
         <parent link="leg5_MG996t" />
         <child link="leg5_tibia" />
     </joint>
+    <!--
     <joint name="leg5_tibia_shield" type="fixed">
         <origin xyz="0.09324640999999999 0.0113 0.010749999999999994" rpy="3.141592653589793 -1.5707963267948966 0" />
         <parent link="leg5_tibia" />
         <child link="leg5_shield" />
     </joint>
+    -->
 
     <!--Leg 6 joints-->
     <joint name="base_link_leg6_MG996c" type="fixed">
@@ -1131,16 +1153,18 @@
         <parent link="leg6_femur" />
         <child link="leg6_MG996t" />
         <axis xyz="0.707107 -0.707107 0.0" />
-        <limit lower="0.0" upper="1.570796" effort="1000000" velocity="1000000" />
+        <limit lower="-3.14159" upper="3.14159" effort="1000000" velocity="1000000" />
     </joint>
     <joint name="leg6_MG996t_tibia" type="fixed">
         <origin xyz="-0.0024041599999999976 -0.018031230000000013 0.005250000000000004" rpy="3.141592653589793 -0.0 -5.55111512312578e-17" />
         <parent link="leg6_MG996t" />
         <child link="leg6_tibia" />
     </joint>
+    <!--
     <joint name="leg6_tibia_shield" type="fixed">
         <origin xyz="0.07392547999999997 -0.05794487000000002 0.02125" rpy="-3.141592653589793 -1.5707963267948966 0" />
         <parent link="leg6_tibia" />
         <child link="leg6_shield" />
     </joint>
+    -->
 </robot>
