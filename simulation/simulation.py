@@ -16,8 +16,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="PyBullet simulation.")
     parser.add_argument("-g", "--gait", type=str, default='tri', help="Gait (tri/wave/ripple)")
-    parser.add_argument("-u", "--URDF", type=str, default='data/URDF/hexapod.urdf', help="Path to the robot's URDF")
-    parser.add_argument("-c", "--config", type=str, default='data/hexapod.json', help="Path to the robot's configuration file")
+    parser.add_argument("-u", "--URDF", type=str, default='Hexapod-Hardware/hexapod.urdf', help="Path to the robot's URDF")
+    parser.add_argument("-c", "--config", type=str, default='simulation/config.json', help="Path to the robot's configuration file")
     parser.add_argument('-n', '--name', type=str, default='hexapod', help="Name of the robot in the config")
     parser.add_argument('-d', '--dt', type=float, default=0.02, help="Time delta for update (default=0.02=50Hz)")
 
