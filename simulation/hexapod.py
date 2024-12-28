@@ -274,7 +274,7 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--roll', type=float, default=0.0, help="Body roll in degrees")
     parser.add_argument('-p', '--pitch', type=float, default=0.0, help="Body pitch in degrees")
     parser.add_argument('-w', '--yaw', type=float, default=45.0, help="Body yaw in degrees")
-    parser.add_argument('-c', '--config', type=str, default='../data/hexapod.json', help="Config file for the hexapod")
+    parser.add_argument('-c', '--config', type=str, default='simulation/config.json', help="Config file for the hexapod")
     parser.add_argument('-n', '--name', type=str, default='hexapod', help="Name of the hexapod in the config")
     args = parser.parse_args()
 

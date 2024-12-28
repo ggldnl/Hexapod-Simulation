@@ -20,12 +20,12 @@ if __name__ == '__main__':
     parser.add_argument("-c", "--config", type=str, default='simulation/config.json', help="Path to the robot's configuration file")
     parser.add_argument('-n', '--name', type=str, default='hexapod', help="Name of the robot in the config")
     parser.add_argument('-d', '--dt', type=float, default=0.02, help="Time delta for update (default=0.02=50Hz)")
+    parser.add_argument('-v', '--video_path', type=str, default=None, help="If provided, the script will save an mp4 of the simulation on the path")
 
     args = parser.parse_args()
 
     # -------------------------------- Controller -------------------------------- #
 
-    # """
     # Read the JSON
     with open(args.config) as f:
         config = json.load(f)
@@ -50,17 +50,21 @@ if __name__ == '__main__':
     physics.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0)
     physics.configureDebugVisualizer(p.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
     physics.configureDebugVisualizer(p.COV_ENABLE_RGB_BUFFER_PREVIEW, 0)
+    p.configureDebugVisualizer(p.COV_ENABLE_SHADOWS, 0)  # Disable shadows
 
     # Set initial camera view
-    default_camera_distance = 1
-    default_camera_yaw = -45
+    default_camera_distance = 0.5
+    default_camera_roll = 0
+    default_camera_yaw = 0
     default_camera_pitch = -45
     default_camera_target = [0, 0, 0]
 
-    physics.resetDebugVisualizerCamera(cameraDistance=default_camera_distance,
-                                    cameraYaw=default_camera_yaw,
-                                    cameraPitch=default_camera_pitch,
-                                    cameraTargetPosition=default_camera_target)
+    physics.resetDebugVisualizerCamera(
+        cameraDistance=default_camera_distance,
+        cameraYaw=default_camera_yaw,
+        cameraPitch=default_camera_pitch,
+        cameraTargetPosition=default_camera_target
+    )
 
     # Load additional data and set gravity
     physics.setAdditionalSearchPath(pybullet_data.getDataPath())
@@ -97,32 +101,43 @@ if __name__ == '__main__':
 
     # ------------------------------ Simulation loop ----------------------------- #
 
+    if args.video_path:
+
+        video_path = Path(args.video_path)
+        folder_path = video_path.parent
+        if not folder_path.exists():
+            folder_path.mkdir(exist_ok=True, parents=True)
+
+        physics.startStateLogging(p.STATE_LOGGING_VIDEO_MP4, args.video_path)
+
     try:
 
         t = 0.0
         # dt = 1. / 240.
         dt = args.dt
 
-        x, y, z = 0, 0, 0
-        roll, pitch, yaw = 10, 10, 10
-        body_pose_set = False
-
         print(f'Standing...')
         controller.stand(2)
+        controller.set_body_pose(
+            [0, 0, 0],
+            [np.deg2rad(10), np.deg2rad(10), np.deg2rad(10)],
+            2
+        )
+        controller.set_body_pose(
+            [0, 0, 0],
+            [np.deg2rad(-10), np.deg2rad(-10), np.deg2rad(-10)],
+            2
+        )
+        controller.set_body_pose(
+            [0, 0, 0],
+            [np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)],
+            1
+        )
 
-        while True:
+        while p.isConnected():
 
             # Step the simulations
             physics.stepSimulation()
-
-            if controller.is_done() and not body_pose_set:
-                print(f'Robot ready, setting body pose...')
-                controller.set_body_pose(
-                    [x, y, z],
-                    [np.deg2rad(roll), np.deg2rad(pitch), np.deg2rad(yaw)],
-                    2
-                )
-                body_pose_set = True
 
             # Get the joint angles
             joint_angles = controller.step(dt)
@@ -138,10 +153,11 @@ if __name__ == '__main__':
                 p.setJointMotorControl2(robotID, joints['tibia_joint'], p.POSITION_CONTROL, targetPosition=angles[2])
 
             time.sleep(dt)
-
             t += dt
 
     finally:
+
+        print('Disconnected.')
 
         # Disconnect from the simulations when done
         physics.disconnect()
