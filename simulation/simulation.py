@@ -117,6 +117,7 @@ if __name__ == '__main__':
         dt = args.dt
 
         print(f'Standing...')
+        controller.wait(2)
         controller.stand(2)
         controller.set_body_pose(
             [0, 0, 0],

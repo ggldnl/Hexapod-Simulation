@@ -124,6 +124,22 @@ class Controller :
 
     # ------------------------------ Hexapod control ----------------------------- #
 
+    def wait(self, duration):
+        """
+        Make the robot wait keeping the current configuration for the given amount of time.
+
+        Parameters:
+            duration (float): Time in seconds to interpolate to the target angles.
+        """
+
+        stand_action = Action(
+            configurations=[
+                np.array([leg.joint_angles for leg in self.hexapod])
+            ],
+            durations=[duration]
+        )
+        self.add_action(stand_action)
+
     def stand(self, duration, height=100, y_offset=120):
         """
         Make the robot stand. The height and distances are used to describe points
