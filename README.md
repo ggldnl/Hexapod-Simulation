@@ -22,7 +22,7 @@ For a complete overview of the project, refer to the [main Hexapod repository](h
 
 1. Run the simulation script:
    ```bash
-   python simulation/simulation.py
+   python simulation/main.py
    ```
 
 ## 📝 Notes

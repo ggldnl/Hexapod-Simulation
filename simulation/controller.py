@@ -1,25 +1,15 @@
 import numpy as np
-from numpy import pi
 
-from action import Action
+from simulation.state import State
+from simulation.action import Action
 
 
-class Controller :
+class Controller:
 
-    def __init__(self,
-                 hexapod
-                 ):
-        """
-        Hexapod controller, interpolates the current joint angles to the target ones and
-        handles the gait sequence.
-
-        Parameters:
-            hexapod (Hexapod): Hexapod class used to compute the inverse kinematics.
-        """
+    def __init__(self, hexapod):
 
         self.hexapod = hexapod
 
-        self.current_angles = np.zeros((6, 3))  # Assuming 6 legs with 3 DoF each
         self.current_action = None
         self.action_queue = []
         self.elapsed = 0  # Time elapsed in the current interpolation
@@ -27,53 +17,16 @@ class Controller :
 
     # ----------------------------- Utility functions ---------------------------- #
 
-    @staticmethod
-    def map_range(value, in_min, in_max, out_min, out_max):
-        return (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
-
-    def translate(self, angles):
-        """
-        Convert joint angles from the kinematic model to servo space.
-
-        Parameters:
-            angles (np.ndarray): Joint angles from the kinematic model (6x3).
-        Returns:
-            np.ndarray: Translated angles for servo motors.
-        """
-
-        translated_angles = angles.copy()
-
-        # Translate angles for each leg
-        for i, leg_angles in enumerate(translated_angles):
-            leg_angles = [
-                leg_angles[0],  # Coxa angle is the same
-                self.map_range(leg_angles[1], pi / 2, -pi / 2, 0, pi),
-                self.map_range(leg_angles[2], -pi / 2, pi / 2, 0, -pi)
-            ]
-            translated_angles[i] = leg_angles
-
-        # Apply offsets to the angles
-        offset = np.deg2rad(25)
-        for i, leg_angles in enumerate(translated_angles):
-            leg_angles[1] -= offset
-            leg_angles[2] += offset
-
-        # Mirror left legs
-        for i, leg_angles in enumerate(translated_angles):
-            if i > 2:
-                leg_angles[1] *= -1
-
-        return translated_angles
-
     def step(self, dt):
         """
-        Update the joint angles by interpolating between current and target configurations.
+        Update the joint angles by interpolating between current and target states.
 
         Parameters:
             dt (float): Time step in seconds.
         Returns:
             np.ndarray: Updated joint angles in servo configuration.
         """
+
         if not self.current_action:
             # Get the next action if the current one is complete
             if self.action_queue:
@@ -82,30 +35,28 @@ class Controller :
                 self.elapsed = 0
             else:
                 # No actions to execute
-                return self.translate(self.current_angles)
+                return self.hexapod.state.joint_angles
 
         # Get the current target and duration
-        target_angles, duration = self.current_action.current_target()
-        if target_angles is None:
+        target_state, duration = self.current_action.current_target()
+        if target_state is None:
             # Action is complete
             self.current_action = None
-            return self.translate(self.current_angles)
+            return self.hexapod.state.joint_angles
 
         # Update elapsed time
         self.elapsed += dt
         progress = min(self.elapsed / duration, 1)  # Clamp progress to [0, 1]
 
-        # Interpolate between current and target angles
-        self.current_angles = (
-                (1 - progress) * self.current_angles + progress * target_angles
-        )
+        # Interpolate between current and target state
+        self.hexapod.state.interpolate(target_state, progress)
 
         if progress == 1:
             # Target reached, advance to the next step in the action
             self.current_action.advance()
             self.elapsed = 0
 
-        return self.translate(self.current_angles)
+        return self.hexapod.state.joint_angles
 
     def is_done(self):
         """
@@ -115,30 +66,54 @@ class Controller :
 
     def add_action(self, action):
         """
-        Add an action to the queue.
+        Add an action to the queue. An action consists of a state and a duration.
+        The robot will try to reach the desired state in the specified amount of time.
 
         Parameters:
             action (Action): An Action object to add to the queue.
         """
         self.action_queue.append(action)
 
-    # ------------------------------ Hexapod control ----------------------------- #
+    # ---------------------------------- Actions --------------------------------- #
 
-    def wait(self, duration):
-        """
-        Make the robot wait keeping the current configuration for the given amount of time.
+    # WARN ensure all the methods in the controller are consistent with respect to targets_in_body_frame
+    #   e.g.
+    #   1. the previous action set the legs_positions expressed in leg frame in the state;
+    #   2. legs_positions could be missing in the current action, making the get_state method take them
+    #       from the current state;
+    #   3. the default value of targets_in_body_frame will be used (True);
+    #   4. the value of targets_in_body_frame will not match: targets points are expressed in leg frame
+    #       but targets_in_body_frame is True
 
-        Parameters:
-            duration (float): Time in seconds to interpolate to the target angles.
-        """
+    def get_state(self, legs_positions=None, body_position=None, body_orientation=None, convert_to_body_frame=False):
 
-        stand_action = Action(
-            configurations=[
-                np.array([leg.joint_angles for leg in self.hexapod])
-            ],
-            durations=[duration]
+        # At least one of the three should be provided
+        if all(param is None for param in (legs_positions, body_position, body_orientation)):
+            raise ValueError('You should specify a target configuration to reach. None was given.')
+
+        # TODO add logic to keep the parts of the state that are not specified unchanged
+
+        if convert_to_body_frame:
+            legs_positions = self.hexapod.transform_to_body_frame(legs_positions)
+
+        joint_angles = self.hexapod.inverse_kinematics(
+            legs_positions,
+            body_position,
+            body_orientation,
+            targets_in_body_frame=True
         )
-        self.add_action(stand_action)
+
+        # TODO add automatic error handling
+        #  -> catch exception in hexapod class and return None if the point is unreachable
+        if joint_angles is not None:
+            return State(
+                body_position=body_position,
+                body_orientation=body_orientation,
+                legs_positions=legs_positions,
+                joint_angles=joint_angles
+            )
+        else:
+            return self.hexapod.state
 
     def stand(self, duration, height=100, y_offset=120):
         """
@@ -152,35 +127,60 @@ class Controller :
         """
 
         stand_action = Action(
-            configurations=[
+            states=[
 
                 # Extend the leg
-                self.hexapod.inverse_kinematics([[y_offset, 0, 0] for _ in range(6)]),
+                self.get_state(
+                    legs_positions=np.array([[y_offset, 0, 0] for _ in range(6)]),
+                    convert_to_body_frame=True
+                ),
 
                 # Full lift
-                self.hexapod.inverse_kinematics([[y_offset, 0, -height] for _ in range(6)])
+                self.get_state(
+                    legs_positions=np.array([[y_offset, 0, 0] for _ in range(6)]),
+                    body_position=np.array([0, 0, height]),
+                    convert_to_body_frame=True
+                )
+
             ],
-            durations=[duration, duration]
+            durations=[
+                duration,
+                duration
+            ]
         )
         self.add_action(stand_action)
 
-    def set_body_pose(self, position, orientation, duration):
+    def wait(self, duration):
         """
-        Set the target body pose.
+        Make the robot wait keeping the current configuration for the given amount of time.
 
         Parameters:
-            position (list): Target body position (x, y, z).
-            orientation (list): Target body orientation (roll, pitch, yaw).
             duration (float): Time in seconds to interpolate to the target angles.
         """
 
-        self.hexapod.set_body_pose(position, orientation)
-        target_angles = np.array([leg.joint_angles for leg in self.hexapod.legs])
-
-        body_pose_action = Action(
-            configurations=[
-                target_angles
+        wait_action = Action(
+            states=[
+                self.hexapod.state
             ],
             durations=[duration]
         )
-        self.add_action(body_pose_action)
+        self.add_action(wait_action)
+
+    def reach(self, duration, legs_positions=None, body_position=None, body_orientation=None):
+        """
+        Reach a target configuration (body pose and end effectors positions).
+
+        Parameters:
+            duration (float): Time in seconds to interpolate to the target angles.
+            legs_positions (np.ndarray): Target end-effector positions for each leg (6x3 matrix).
+            body_position (np.ndarray): [x, y, z] position of the body in the world frame. Default is [0, 0, 0].
+            body_orientation (np.ndarray): [roll, pitch, yaw] orientation of the body in the world frame. Default is [0, 0, 0].
+        """
+
+        reach_action = Action(
+            states=[
+                self.get_state(legs_positions, body_position, body_orientation)
+            ],
+            durations=[duration]
+        )
+        self.add_action(reach_action)
