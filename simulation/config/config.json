@@ -1,0 +1,210 @@
+{
+    "hexapod": {
+      "body": {
+        "frame": {
+          "position": [0.0, 0.0, 0.0],
+          "orientation": [0.0, 0.0, 0.0]
+        }
+      },
+      "legs": {
+        "leg_1": {
+          "frame": {
+            "position": [60.607, 80.607, 0.0],
+            "orientation": [0.0, 0.0, 0.785398]
+          },
+          "coxa": {
+            "pin": 0,
+            "min_angle": -1.5708,
+            "max_angle": 1.5708,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 42
+          },
+          "femur": {
+            "pin": 1,
+            "min_angle": -1.5708,
+            "max_angle": 0.785398,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 70
+          },
+          "tibia": {
+            "pin": 2,
+            "min_angle": -1.5708,
+            "max_angle": 1.5708,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 90
+          }
+        },
+        "leg_2": {
+          "frame": {
+            "position": [80.5, 0.0, 0.0],
+            "orientation": [0.0, 0.0, 0.0]
+          },
+          "coxa": {
+            "pin": 3,
+            "min_angle": -1.5708,
+            "max_angle": 1.5708,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 42
+          },
+          "femur": {
+            "pin": 4,
+            "min_angle": -1.5708,
+            "max_angle": 0.785398,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 70
+          },
+          "tibia": {
+            "pin": 5,
+            "min_angle": -1.5708,
+            "max_angle": 1.5708,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 90
+          }
+        },
+        "leg_3": {
+          "frame": {
+            "position": [60.607, -80.607, 0.0],
+            "orientation": [0.0, 0.0, -0.785398]
+          },
+          "coxa": {
+            "pin": 6,
+            "min_angle": -1.5708,
+            "max_angle": 1.5708,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 42
+          },
+          "femur": {
+            "pin": 7,
+            "min_angle": -1.5708,
+            "max_angle": 0.785398,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 70
+          },
+          "tibia": {
+            "pin": 8,
+            "min_angle": -1.5708,
+            "max_angle": 1.5708,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 90
+          }
+        },
+        "leg_4": {
+          "frame": {
+            "position": [-60.607, -80.607, 0.0],
+            "orientation": [0.0, 0.0, -2.35619]
+          },
+          "coxa": {
+            "pin": 9,
+            "min_angle": -1.5708,
+            "max_angle": 1.5708,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 42
+          },
+          "femur": {
+            "pin": 10,
+            "min_angle": -0.785398,
+            "max_angle": 1.5708,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 70
+          },
+          "tibia": {
+            "pin": 11,
+            "min_angle": -1.5708,
+            "max_angle": 1.5708,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 90
+          }
+        },
+        "leg_5": {
+          "frame": {
+            "position": [-80.5, 0.0, 0.0],
+            "orientation": [0.0, 0.0, 3.14159]
+          },
+          "coxa": {
+            "pin": 12,
+            "min_angle": -1.5708,
+            "max_angle": 1.5708,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 42
+          },
+          "femur": {
+            "pin": 13,
+            "min_angle": -0.785398,
+            "max_angle": 1.5708,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 70
+          },
+          "tibia": {
+            "pin": 14,
+            "min_angle": -1.5708,
+            "max_angle": 1.5708,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 90
+          }
+        },
+        "leg_6": {
+          "frame": {
+            "position": [-60.607, 80.607, 0.0],
+            "orientation": [0.0, 0.0, 2.35619]
+          },
+          "coxa": {
+            "pin": 15,
+            "min_angle": -1.5708,
+            "max_angle": 1.5708,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 42
+          },
+          "femur": {
+            "pin": 16,
+            "min_angle": -0.785398,
+            "max_angle": 1.5708,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 70
+          },
+          "tibia": {
+            "pin": 17,
+            "min_angle": -1.5708,
+            "max_angle": 1.5708,
+            "cur_angle": 0.0,
+            "min_pulse": 1000,
+            "max_pulse": 2000,
+            "length": 90
+          }
+        }
+      }
+    }
+  }
