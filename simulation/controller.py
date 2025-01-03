@@ -190,10 +190,9 @@ class Controller:
         Reach a target configuration (body pose and end effectors positions).
 
         Parameters:
-            duration (float): Time in seconds to interpolate to the target angles.
-            legs_positions (np.ndarray): Target end-effector positions for each leg (6x3 matrix).
-            body_position (np.ndarray): [x, y, z] position of the body in the world frame. Default is [0, 0, 0].
-            body_orientation (np.ndarray): [roll, pitch, yaw] orientation of the body in the world frame. Default is [0, 0, 0].
+            legs_positions (np.ndarray): Target end-effector positions for each leg (6x3 matrix) in world frame.
+            body_position (np.ndarray): [x, y, z] position of the body in the world frame.
+            body_orientation (np.ndarray): [roll, pitch, yaw] orientation of the body in the world frame.
         """
 
         reach_action = Action(
