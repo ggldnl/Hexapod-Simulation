@@ -251,13 +251,10 @@ class Robot(RobotInterface):
         return pulses
 
 
-def draw(hexapod, additional_points=None):
+def draw(hexapod):
     """
     Draws the hexapod using Plotly and labels each leg with its index.
     """
-
-    if additional_points is None:
-        additional_points = []
 
     fig = go.Figure()
 
@@ -334,21 +331,9 @@ def draw(hexapod, additional_points=None):
             showlegend=False
         ))
 
-    if len(additional_points) > 0:
-        additional_points = np.array(additional_points)
-        fig.add_trace(go.Scatter3d(
-            x=additional_points[:, 0],
-            y=additional_points[:, 1],
-            z=additional_points[:, 2],
-            mode='markers',
-            marker=dict(size=6, color='green'),
-            name='Additional Points'
-        ))
-
-    # Set axis labels
     fig.update_layout(
         scene=dict(
-            aspectmode='cube',
+            aspectmode='data',
             xaxis_title="X",
             yaxis_title="Y",
             zaxis_title="Z"
