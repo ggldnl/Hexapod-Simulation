@@ -112,10 +112,14 @@ if __name__ == '__main__':
 
         # Define the actions the robot will execute
         controller.stand(2)
-        controller.wait(2)
+        controller.wait(1)
         controller.reach(
             2,
             body_orientation=np.array([0, 0, np.deg2rad(10)])
+        )
+        controller.reach(
+            2,
+            body_orientation=np.array([0, 0, -np.deg2rad(10)])
         )
 
         while p.isConnected():

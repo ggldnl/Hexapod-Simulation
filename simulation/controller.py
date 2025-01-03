@@ -85,7 +85,34 @@ class Controller:
     #   4. the value of targets_in_body_frame will not match: targets points are expressed in leg frame
     #       but targets_in_body_frame is True
 
-    def get_state(self, legs_positions, body_position=None, body_orientation=None):
+    def get_state(self, legs_positions=None, body_position=None, body_orientation=None):
+        """
+        Given the body pose and legs positions, returns a state with them.
+        This method tries to fill the missing arguments using the last state of the last action that the
+        robot should execute. If none of the above parameters are given, this method returns the current
+        state and this translates to the robot keeping the same position (waiting).
+        The legs target positions are supposed to be in body frame.
+
+        Parameters:
+            legs_positions (np.ndarray): Target end-effector positions for each leg (6x3 matrix) in world frame.
+            body_position (np.ndarray): [x, y, z] position of the body in the world frame.
+            body_orientation (np.ndarray): [roll, pitch, yaw] orientation of the body in the world frame.
+        """
+
+        # Take the last state we need to reach, if any, and use it to fill the missing parameters
+        if self.action_queue:
+            previous_state = self.action_queue[-1].states[-1]
+        else:
+            previous_state = self.hexapod.state
+
+        if legs_positions is None:
+            legs_positions = previous_state.legs_positions
+
+        if body_position is None:
+            body_position = previous_state.body_position
+
+        if body_orientation is None:
+            body_orientation = previous_state.body_orientation
 
         joint_angles = self.hexapod.inverse_kinematics(
             legs_positions,
@@ -122,15 +149,16 @@ class Controller:
 
                 # Extend the leg
                 self.get_state(
-                    legs_positions=np.array([[y_offset, 0, 0] for _ in range(6)]),
-                    convert_to_body_frame=True
+                    legs_positions=self.hexapod.transform_to_body_frame(np.array([[y_offset, 0, 0] for _ in range(6)])),
+                    body_position=np.zeros(3),
+                    body_orientation=np.zeros(3)
                 ),
 
                 # Full lift
                 self.get_state(
-                    legs_positions=np.array([[y_offset, 0, 0] for _ in range(6)]),
+                    legs_positions=self.hexapod.transform_to_body_frame(np.array([[y_offset, 0, 0] for _ in range(6)])),
                     body_position=np.array([0, 0, height]),
-                    convert_to_body_frame=True
+                    body_orientation=np.zeros(3)
                 )
 
             ],
@@ -151,13 +179,13 @@ class Controller:
 
         wait_action = Action(
             states=[
-                self.hexapod.state
+                self.get_state()
             ],
             durations=[duration]
         )
         self.add_action(wait_action)
 
-    def reach(self, duration, legs_positions=None, body_position=None, body_orientation=None, convert_to_body_frame=False):
+    def reach(self, duration, legs_positions=None, body_position=None, body_orientation=None):
         """
         Reach a target configuration (body pose and end effectors positions).
 
@@ -166,30 +194,7 @@ class Controller:
             legs_positions (np.ndarray): Target end-effector positions for each leg (6x3 matrix).
             body_position (np.ndarray): [x, y, z] position of the body in the world frame. Default is [0, 0, 0].
             body_orientation (np.ndarray): [roll, pitch, yaw] orientation of the body in the world frame. Default is [0, 0, 0].
-            convert_to_body_frame (bool): If True, the target points are expressed in leg frames and should be converted to body frame.
         """
-
-        # At least one of the three should be provided
-        if all(param is None for param in (legs_positions, body_position, body_orientation)):
-            raise ValueError('You should specify a target configuration to reach. None was given.')
-        
-        # Take the last state we need to reach, if any, and use it to fill the missing parameters 
-        if self.action_queue:
-            previous_state = self.action_queue[-1].states[-1]
-        else:
-            previous_state = self.hexapod.state
-
-        if legs_positions is None:
-            legs_positions = previous_state.legs_positions
-        else:
-            if convert_to_body_frame:
-                legs_positions = self.hexapod.transform_to_body_frame(legs_positions)
-
-        if body_position is None:
-            body_position = previous_state.body_position
-        
-        if body_orientation is None:
-            body_orientation = previous_state.body_orientation
 
         reach_action = Action(
             states=[
