@@ -1,7 +1,6 @@
 import plotly.graph_objects as go
 from abc import ABC
 import numpy as np
-from exceptiongroup import catch
 
 from simulation.kinematics import HexapodModel, LegModel
 from simulation.kinematics import transformation_matrix, rotation_matrix
