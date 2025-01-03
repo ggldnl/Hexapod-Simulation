@@ -85,16 +85,7 @@ class Controller:
     #   4. the value of targets_in_body_frame will not match: targets points are expressed in leg frame
     #       but targets_in_body_frame is True
 
-    def get_state(self, legs_positions=None, body_position=None, body_orientation=None, convert_to_body_frame=False):
-
-        # At least one of the three should be provided
-        if all(param is None for param in (legs_positions, body_position, body_orientation)):
-            raise ValueError('You should specify a target configuration to reach. None was given.')
-
-        # TODO add logic to keep the parts of the state that are not specified unchanged
-
-        if convert_to_body_frame:
-            legs_positions = self.hexapod.transform_to_body_frame(legs_positions)
+    def get_state(self, legs_positions, body_position=None, body_orientation=None):
 
         joint_angles = self.hexapod.inverse_kinematics(
             legs_positions,
@@ -166,7 +157,7 @@ class Controller:
         )
         self.add_action(wait_action)
 
-    def reach(self, duration, legs_positions=None, body_position=None, body_orientation=None):
+    def reach(self, duration, legs_positions=None, body_position=None, body_orientation=None, convert_to_body_frame=False):
         """
         Reach a target configuration (body pose and end effectors positions).
 
@@ -175,7 +166,30 @@ class Controller:
             legs_positions (np.ndarray): Target end-effector positions for each leg (6x3 matrix).
             body_position (np.ndarray): [x, y, z] position of the body in the world frame. Default is [0, 0, 0].
             body_orientation (np.ndarray): [roll, pitch, yaw] orientation of the body in the world frame. Default is [0, 0, 0].
+            convert_to_body_frame (bool): If True, the target points are expressed in leg frames and should be converted to body frame.
         """
+
+        # At least one of the three should be provided
+        if all(param is None for param in (legs_positions, body_position, body_orientation)):
+            raise ValueError('You should specify a target configuration to reach. None was given.')
+        
+        # Take the last state we need to reach, if any, and use it to fill the missing parameters 
+        if self.action_queue:
+            previous_state = self.action_queue[-1].states[-1]
+        else:
+            previous_state = self.hexapod.state
+
+        if legs_positions is None:
+            legs_positions = previous_state.legs_positions
+        else:
+            if convert_to_body_frame:
+                legs_positions = self.hexapod.transform_to_body_frame(legs_positions)
+
+        if body_position is None:
+            body_position = previous_state.body_position
+        
+        if body_orientation is None:
+            body_orientation = previous_state.body_orientation
 
         reach_action = Action(
             states=[
