@@ -169,4 +169,5 @@ cython_debug/
 
 .vscode
 .idea
-recordings/
+recordings
+.codegpt
