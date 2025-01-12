@@ -9,7 +9,7 @@ import json
 import time
 
 from simulation.controller import Controller
-from simulation.hexapod import VirtualRobot
+from simulation.hexapod import VirtualHexapod
 
 
 if __name__ == '__main__':
@@ -31,7 +31,7 @@ if __name__ == '__main__':
         config = json.load(f)
 
     # Create a virtual robot to use in simulation
-    hexapod = VirtualRobot(config[args.name])
+    hexapod = VirtualHexapod(config[args.name])
     controller = Controller(hexapod)
 
     # --------------------------------- PyBullet --------------------------------- #
@@ -111,16 +111,19 @@ if __name__ == '__main__':
         dt = args.dt
 
         # Define the actions the robot will execute
+
+        # Stand and wait a little
         controller.stand(2)
         controller.wait(1)
-        controller.reach(
-            2,
-            body_orientation=np.array([0, 0, np.deg2rad(10)])
-        )
-        controller.reach(
-            2,
-            body_orientation=np.array([0, 0, -np.deg2rad(10)])
-        )
+
+        # Look around
+        controller.set_body_pose(2, body_orientation=np.array([0, np.deg2rad(10), np.deg2rad(10)]))
+        controller.set_body_pose(2, body_orientation=np.array([0, np.deg2rad(-10), np.deg2rad(-10)]))
+        controller.set_body_pose(2, body_orientation=np.array([0, 0, 0]))
+
+        # Raise and lower leg
+        controller.set_leg_position(1, 0, np.array([100, 165, 100]))
+        controller.set_leg_position(1, 0, np.array([145, 165, 0]))
 
         while p.isConnected():
 

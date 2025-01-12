@@ -1,17 +1,19 @@
 class Action:
 
-    def __init__(self, states, durations):
+    def __init__(self, states, durations, name=''):
         """
         Represents a sequence of target states with durations for each one of them.
 
         Parameters:
-            states (list[Configuration]): List of target configurations.
+            states (list[State]): List of target states.
             durations (list[float]): List of durations for each configuration.
         """
         assert len(states) == len(durations)
 
         self.states = states
         self.durations = durations
+        self.name = name
+
         self.current_index = 0
         self.started = False
         self.ended = False

@@ -1,5 +1,4 @@
 import plotly.graph_objects as go
-from abc import ABC
 import numpy as np
 
 from simulation.kinematics import HexapodModel, LegModel
@@ -7,11 +6,11 @@ from simulation.kinematics import transformation_matrix, rotation_matrix
 from simulation.state import State
 
 
-class RobotInterface(HexapodModel, ABC):
+class VirtualHexapod(HexapodModel):
     """
-    Wrapper to the kinematic model that also Keeps an internal state
-    (body position, body orientation and legs positions) and handles
-    exceptions.
+    Represents the robot in a simulation environment. The robot is described by a URDF
+    but this has different joint ranges with respect both to the pyre kinematic model and the actual robot.
+    This class applies a transformation to the computed joint values to mimic the real movement.
     """
 
     def __init__(self, config):
@@ -19,72 +18,42 @@ class RobotInterface(HexapodModel, ABC):
         # Misc
         self.config = config
 
-        body_config = self.config["body"]
+        legs_config = self.config["legs"]
 
         legs = []
-        current_angles = []
-        for i, leg in enumerate(self.config["legs"]):
+        leg_frames = []
+        joint_values = []
+        for i, leg in enumerate(legs_config):
 
-            current_coxa_angle = self.config["legs"][leg]["coxa"]["cur_angle"]
-            current_femur_angle = self.config["legs"][leg]["femur"]["cur_angle"]
-            current_tibia_angle = self.config["legs"][leg]["tibia"]["cur_angle"]
-            current_angles.append([current_coxa_angle, current_femur_angle, current_tibia_angle])
+            current_coxa_angle = legs_config[leg]["coxa"]["cur_angle"]
+            current_femur_angle = legs_config[leg]["femur"]["cur_angle"]
+            current_tibia_angle = legs_config[leg]["tibia"]["cur_angle"]
+            joint_values.append([current_coxa_angle, current_femur_angle, current_tibia_angle])
 
-            coxa_length = self.config["legs"][leg]["coxa"]["length"]
-            femur_length = self.config["legs"][leg]["femur"]["length"]
-            tibia_length = self.config["legs"][leg]["tibia"]["length"]
+            coxa_length = legs_config[leg]["coxa"]["length"]
+            femur_length = legs_config[leg]["femur"]["length"]
+            tibia_length = legs_config[leg]["tibia"]["length"]
 
-            position = self.config["legs"][leg]["frame"]["position"]
-            orientation = self.config["legs"][leg]["frame"]["orientation"]
+            position = legs_config[leg]["frame"]["position"]
+            orientation = legs_config[leg]["frame"]["orientation"]
             leg_frame = transformation_matrix(rotation_matrix(orientation), position)
 
-            legs.append(LegModel(coxa_length, femur_length, tibia_length, leg_frame))
+            legs.append(LegModel(coxa_length, femur_length, tibia_length))
+            leg_frames.append(leg_frame)
 
-        super().__init__(legs=legs)
-
-        # Robot state
-        body_position = np.array(body_config["frame"]["position"])
-        body_orientation = np.array(body_config["frame"]["orientation"])
-        current_angles = np.array(current_angles)
-        legs_positions = self.forward_kinematics(current_angles, body_position, body_orientation)
+        super().__init__(legs=legs, leg_frames=leg_frames)
 
         # Robot state
-        self.state = State(
-            legs_positions,
-            body_position,
-            body_orientation,
-            current_angles
-        )
+        body_config = self.config["body"]
+        body_position = body_config["frame"]["position"]
+        body_orientation = body_config["frame"]["orientation"]
+        joint_values = np.array(joint_values)
+        legs_positions = self.forward_kinematics(joint_values, body_position, body_orientation)
 
-    def transform_to_body_frame(self, target_leg_positions):
-        """
-        Transforms target end-effector positions from their respective leg frames to the body frame.
+        self.state = State(legs_positions, body_position, body_orientation, joint_values)
 
-        Parameters:
-            target_leg_positions (np.ndarray): Target positions for each leg in their respective leg frames (6x3 matrix).
-        """
-
-        # Create the current body frame transformation matrix
-        body_frame = transformation_matrix(rotation_matrix(self.state.body_orientation), self.state.body_position)
-
-        transformed_positions = []
-        for leg, target_position in zip(self.legs, target_leg_positions):
-            # Transform target position from the leg frame to the body frame
-            target_position_body_frame = body_frame @ (leg.frame @ np.array([*target_position, 1]))
-            transformed_positions.append(target_position_body_frame[:3])
-
-        return np.array(transformed_positions)
-
-
-class VirtualRobot(RobotInterface):
-    """
-    Represents the robot in a simulation environment. The robot is described in its parts with a URDF
-    but this has different joint ranges with respect both to the kinematic model and the actual robot.
-    This class applies a transformation to the computed joint values to mimic the real movement.
-    """
-
-    def __init__(self, config):
-        super().__init__(config)
+    def get_joint_values(self):
+        return self.state.joint_values
 
     @staticmethod
     def map_range(value, in_min, in_max, out_min, out_max):
@@ -121,19 +90,27 @@ class VirtualRobot(RobotInterface):
 
         return translated_angles
 
-    def inverse_kinematics(self, legs_positions, body_position=None, body_orientation=None, targets_in_body_frame=True):
-        # All the target points are supposed to be in body frame
-        joint_angles = super().inverse_kinematics(
+    def inverse_kinematics_leg_frame(self, legs_positions, body_position=None, body_orientation=None):
+        # All the target points are supposed to be in leg frame
+        joint_values = super().inverse_kinematics_leg_frame(
             legs_positions,
             body_position,
-            body_orientation,
-            targets_in_body_frame=True
+            body_orientation
         )
-        translated_angles = self.translate(joint_angles)
+        translated_angles = self.translate(joint_values)
         return translated_angles
 
+    def inverse_kinematics_origin_frame(self, legs_positions, body_position=None, body_orientation=None):
+        # All the target points are supposed to be in body frame
+        joint_values = super().inverse_kinematics_origin_frame(
+            legs_positions,
+            body_position,
+            body_orientation
+        )
+        translated_angles = self.translate(joint_values)
+        return translated_angles
 
-class Robot(RobotInterface):
+class Hexapod(HexapodModel):
     """
     Represents the real robot. This means we have to translate the joint angles
     computed by the kinematic model into the servo space, check if the conversion
@@ -142,7 +119,9 @@ class Robot(RobotInterface):
     """
 
     def __init__(self, config):
-        super().__init__(config)
+
+        # Misc
+        self.config = config
 
         # Servo ranges
         self.min_angles = []
@@ -150,26 +129,65 @@ class Robot(RobotInterface):
         self.min_pulses = []
         self.max_pulses = []
 
-        for i, leg in enumerate(self.config["legs"]):
-            coxa_min_angle = self.config["legs"][leg]["coxa"]["min_angle"]
-            femur_min_angle = self.config["legs"][leg]["femur"]["min_angle"]
-            tibia_min_angle = self.config["legs"][leg]["tibia"]["min_angle"]
+        # body_config = self.config["body"]
+        legs_config = self.config["legs"]
+
+        joint_values = []
+        legs = []
+        leg_frames = []
+        for i, leg in enumerate(legs_config):
+
+            # Kinematic model
+            current_coxa_angle = legs_config[leg]["coxa"]["cur_angle"]
+            current_femur_angle = legs_config[leg]["femur"]["cur_angle"]
+            current_tibia_angle = legs_config[leg]["tibia"]["cur_angle"]
+            joint_values.append([current_coxa_angle, current_femur_angle, current_tibia_angle])
+
+            coxa_length = legs_config[leg]["coxa"]["length"]
+            femur_length = legs_config[leg]["femur"]["length"]
+            tibia_length = legs_config[leg]["tibia"]["length"]
+
+            position = legs_config[leg]["frame"]["position"]
+            orientation = legs_config[leg]["frame"]["orientation"]
+            leg_frame = transformation_matrix(rotation_matrix(orientation), position)
+
+            legs.append(LegModel(coxa_length, femur_length, tibia_length))
+            leg_frames.append(leg_frame)
+
+            # Servo ranges
+            coxa_min_angle = legs_config[leg]["coxa"]["min_angle"]
+            femur_min_angle = legs_config[leg]["femur"]["min_angle"]
+            tibia_min_angle = legs_config[leg]["tibia"]["min_angle"]
             self.min_angles.append([coxa_min_angle, femur_min_angle, tibia_min_angle])
 
-            coxa_max_angle = self.config["legs"][leg]["coxa"]["max_angle"]
-            femur_max_angle = self.config["legs"][leg]["femur"]["max_angle"]
-            tibia_max_angle = self.config["legs"][leg]["tibia"]["max_angle"]
+            coxa_max_angle = legs_config[leg]["coxa"]["max_angle"]
+            femur_max_angle = legs_config[leg]["femur"]["max_angle"]
+            tibia_max_angle = legs_config[leg]["tibia"]["max_angle"]
             self.max_angles.append([coxa_max_angle, femur_max_angle, tibia_max_angle])
 
-            coxa_min_pulse = self.config["legs"][leg]["coxa"]["min_pulse"]
-            femur_min_pulse = self.config["legs"][leg]["femur"]["min_pulse"]
-            tibia_min_pulse = self.config["legs"][leg]["tibia"]["min_pulse"]
+            coxa_min_pulse = legs_config[leg]["coxa"]["min_pulse"]
+            femur_min_pulse = legs_config[leg]["femur"]["min_pulse"]
+            tibia_min_pulse = legs_config[leg]["tibia"]["min_pulse"]
             self.min_pulses.append([coxa_min_pulse, femur_min_pulse, tibia_min_pulse])
 
-            coxa_max_pulse = self.config["legs"][leg]["coxa"]["max_pulse"]
-            femur_max_pulse = self.config["legs"][leg]["femur"]["max_pulse"]
-            tibia_max_pulse = self.config["legs"][leg]["tibia"]["max_pulse"]
+            coxa_max_pulse = legs_config[leg]["coxa"]["max_pulse"]
+            femur_max_pulse = legs_config[leg]["femur"]["max_pulse"]
+            tibia_max_pulse = legs_config[leg]["tibia"]["max_pulse"]
             self.max_pulses.append([coxa_max_pulse, femur_max_pulse, tibia_max_pulse])
+
+        super().__init__(legs=legs, leg_frames=leg_frames)
+
+        # Robot state
+        body_config = self.config["body"]
+        body_position = body_config["frame"]["position"]
+        body_orientation = body_config["frame"]["orientation"]
+        joint_values = np.array(joint_values)
+        legs_positions = self.forward_kinematics(joint_values, body_position, body_orientation)
+
+        self.state = State(legs_positions, body_position, body_orientation, joint_values)
+
+    def get_joint_values(self):
+        return self.state.joint_values
 
     @staticmethod
     def map_range(value, in_min, in_max, out_min, out_max):
@@ -237,13 +255,24 @@ class Robot(RobotInterface):
             joint_pulses.append(leg_pulses)
         return np.array(joint_pulses)
 
-    def inverse_kinematics(self, legs_positions, body_position=None, body_orientation=None, targets_in_body_frame=True):
-        # All the target points are supposed to be in body frame
-        joint_angles = super().inverse_kinematics(
+    def inverse_kinematics_leg_frame(self, legs_positions, body_position=None, body_orientation=None):
+        # All the target points are supposed to be in leg frame
+        joint_angles = super().inverse_kinematics_leg_frame(
             legs_positions,
             body_position,
-            body_orientation,
-            targets_in_body_frame=True
+            body_orientation
+        )
+        translated_angles = self.translate(joint_angles)
+        translated_angles = self.check(translated_angles)
+        pulses = self.to_pulse(translated_angles)
+        return pulses
+
+    def inverse_kinematics_origin_frame(self, legs_positions, body_position=None, body_orientation=None):
+        # All the target points are supposed to be in body frame
+        joint_angles = super().inverse_kinematics_origin_frame(
+            legs_positions,
+            body_position,
+            body_orientation
         )
         translated_angles = self.translate(joint_angles)
         translated_angles = self.check(translated_angles)
@@ -251,21 +280,29 @@ class Robot(RobotInterface):
         return pulses
 
 
-def draw(hexapod):
+def draw(hexapod, body_position=None, body_orientation=None):
     """
     Draws the hexapod using Plotly and labels each leg with its index.
     """
 
     fig = go.Figure()
 
-    body_frame = transformation_matrix(rotation_matrix(hexapod.state.body_orientation), hexapod.state.body_position)
+    if body_position is None:
+        body_position = np.zeros(3)
+
+    if body_orientation is None:
+        body_orientation = np.zeros(3)
+
+    body_frame = transformation_matrix(rotation_matrix(body_orientation), body_position)
 
     # Plot body points and connect them
     body_points = []
-    for leg in hexapod.legs:
-        new_leg_frame = body_frame @ leg.frame
+    for leg, leg_frame in zip(hexapod.legs, hexapod.leg_frames):
+        new_leg_frame = body_frame @ leg_frame
         x_off, y_off, z_off = new_leg_frame[:3, 3]
         body_points.append((x_off, y_off, z_off))
+
+    print(f'Body points:\n{np.round(body_points, 2)}')
 
     body_points.append(body_points[0])  # Close the body loop
     body_points = np.array(body_points)
@@ -282,7 +319,7 @@ def draw(hexapod):
     ))
 
     # Plot each leg with labels
-    for index, (leg, leg_angles) in enumerate(zip(hexapod.legs, hexapod.state.joint_angles)):
+    for index, (leg, leg_frame, leg_angles) in enumerate(zip(hexapod.legs, hexapod.leg_frames, hexapod.joint_values)):
 
         # Joint positions
         c = leg.coxa
@@ -306,7 +343,7 @@ def draw(hexapod):
 
         # Apply leg frame transformation
         positions = [coxa_pos, femur_pos, tibia_pos, end_effector_pos]
-        positions = [body_frame @ leg.frame @ np.array([*pos, 1]) for pos in positions]
+        positions = [body_frame @ leg_frame @ np.array([*pos, 1]) for pos in positions]
         positions = np.array([pos[:3] for pos in positions])
 
         # Add leg line and points
@@ -353,6 +390,15 @@ if __name__ == '__main__':
     parser.add_argument("-c", "--config", type=str, default='simulation/config/config.json',
                         help="Path to the robot's configuration file")
     parser.add_argument('-n', '--name', type=str, default='hexapod', help="Name of the robot in the config")
+    parser.add_argument('-X', '--body-x', type=float, default=0, help="Body x coordinate")
+    parser.add_argument('-Y', '--body-y', type=float, default=0, help="Body y coordinate")
+    parser.add_argument('-Z', '--body-z', type=float, default=100, help="Body z coordinate")
+    parser.add_argument('-r', '--roll', type=float, default=0, help="Roll angle (degrees)")
+    parser.add_argument('-p', '--pitch', type=float, default=10, help="Pitch angle (degrees)")
+    parser.add_argument('-w', '--yaw', type=float, default=10, help="Yaw angle (degrees)")
+    parser.add_argument('-x', '--leg-x', type=float, default=120, help="Leg x coordinate (leg frame)")
+    parser.add_argument('-y', '--leg-y', type=float, default=0, help="Leg y coordinate (leg frame)")
+    parser.add_argument('-z', '--leg-z', type=float, default=0, help="Leg z coordinate (leg frame)")
 
     args = parser.parse_args()
 
@@ -361,53 +407,31 @@ if __name__ == '__main__':
         config = json.load(f)
 
     # Create a Hexapod object
-    hexapod = RobotInterface(config[args.name])
+    hexapod = VirtualHexapod(config[args.name])
 
-    """
-    angles = [45, 0, -45, -135, 180, 135]
-    angles = [np.deg2rad(a) for a in angles]
-    radius = 150
-    legs_positions = np.array([
-        [round(radius * np.cos(angle), 2), round(radius * np.sin(angle), 2), 0]
-        for angle in angles
-    ])
+    # We need to disable the translation as we are dealing with the kinematic model and not the
+    # simulated robot
+    hexapod.translate = lambda x: x
 
-    body_position = np.array([0, 0, 60])
-    body_orientation = np.array([0, 0, np.deg2rad(10)])
+    # Set target points in leg frames
+    legs_positions = np.array([[args.leg_x, args.leg_y, args.leg_z] for _ in range(6)])
+    body_position = np.array([args.body_x, args.body_y, args.body_z])
+    body_orientation = np.array([np.deg2rad(args.roll), np.deg2rad(args.pitch), np.deg2rad(args.yaw)])
 
-    joint_values = hexapod.inverse_kinematics(
+    print(f'\nBody position:\n{np.round(body_position, 2)}')
+    print(f'\nBody orientation:\n{np.round(body_orientation, 2)}')
+    print(f'\nLeg positions (leg frame):\n{np.round(legs_positions, 2)}')
+
+    joint_angles = hexapod.inverse_kinematics_leg_frame(
         legs_positions,
         body_position,
-        body_orientation,
-        targets_in_body_frame=True
+        body_orientation
     )
+    print(f'\nJoint angles:\n{np.round(joint_angles, 2)}')
 
-    hexapod.state = State(
-        legs_positions=legs_positions,
-        body_position=body_position,
-        body_orientation=body_orientation,
-        joint_angles=joint_values
-    )
-    """
+    # Draw the hexapod
+    hexapod.joint_values = joint_angles  # We put the joint values inside just to draw it
+    draw(hexapod, body_position=body_position, body_orientation=body_orientation)
 
-    """
-    legs_positions = np.array([[120, 0, 0] for _ in range(6)])
-    body_position = np.array([0, 0, 60])
-    body_orientation = np.array([0, 0, np.deg2rad(10)])
-
-    joint_values = hexapod.inverse_kinematics(
-        legs_positions,
-        body_position,
-        body_orientation,
-        targets_in_body_frame=False
-    )
-
-    hexapod.state = State(
-        legs_positions=legs_positions,
-        body_position=body_position,
-        body_orientation=body_orientation,
-        joint_angles=joint_values
-    )
-    """
-
-    draw(hexapod)
+    computed_legs_positions = hexapod.forward_kinematics(joint_angles, body_position, body_orientation)
+    print(f'\nForward kinematics:\n{np.round(computed_legs_positions, 2)}')
