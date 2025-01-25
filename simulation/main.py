@@ -114,16 +114,25 @@ if __name__ == '__main__':
 
         # Stand and wait a little
         controller.stand(2)
-        controller.wait(1)
 
         # Look around
         controller.set_body_pose(2, body_orientation=np.array([0, np.deg2rad(10), np.deg2rad(10)]))
         controller.set_body_pose(2, body_orientation=np.array([0, np.deg2rad(-10), np.deg2rad(-10)]))
         controller.set_body_pose(2, body_orientation=np.array([0, 0, 0]))
 
+        # Hop some legs
+        current_leg_position = controller.get_last_state_in_queue().legs_positions[0]
+        new_leg_position = current_leg_position.copy()
+        new_leg_position[2] = 60
+
+        controller.set_legs_positions(2, new_leg_position, indices=[0])
+        controller.set_legs_positions(2, current_leg_position, indices=[0])
+
+        # Homing
+        controller.sit(5)
+
         # Raise and lower leg
-        controller.set_leg_position(1, 0, np.array([100, 165, 100]))
-        controller.set_leg_position(1, 0, np.array([145, 165, 0]))
+        # controller.test_tripod_gait(60, 60, 10, np.pi/4)
 
         while p.isConnected():
 
