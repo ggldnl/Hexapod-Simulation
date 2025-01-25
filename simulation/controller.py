@@ -13,7 +13,7 @@ class Controller:
         self.current_action = None
         self.action_queue = []
         self.elapsed = 0  # Time elapsed in the current interpolation
-        # self.velocity = np.array([0, 0])  # x, y velocity for gait sequence
+        self.velocity = np.array([0, 0])  # x, y velocity for gait sequence
 
     # ----------------------------- Utility functions ---------------------------- #
 
@@ -75,12 +75,22 @@ class Controller:
         """
         self.action_queue.append(action)
 
+    def get_last_state_in_queue(self):
+
+        # Get the last state of the last action of the queue
+        last_state = self.hexapod.state
+        if self.action_queue:
+            last_state = self.action_queue[-1].states[-1]
+        return last_state.copy()
+
     # ---------------------------------- Actions --------------------------------- #
 
     def stand(self, duration, height=100, y_offset=120):
         """
         Make the robot stand. The height and distances are used to describe points
-        in leg frames. These distances are the same for each leg.
+        in leg frames. These distances are the same for each leg. The robot is
+        supposed to be on the ground, thus body orientation and position
+        are (0, 0, 0), (0, 0, 0).
 
         Parameters:
             height (float): Height at which the robot should stand.
@@ -132,8 +142,8 @@ class Controller:
                 lift_phase
             ],
             durations=[
-                duration,
-                duration
+                duration/2,
+                duration/2
             ],
             name='stand'
         )
@@ -150,9 +160,7 @@ class Controller:
         assert duration > 0, f"The duration cannot be < 0."
 
         # Get the last state of the last action of the queue
-        current_state = self.hexapod.state
-        if self.action_queue:
-            current_state = self.action_queue[-1].states[-1]
+        current_state = self.get_last_state_in_queue()
 
         wait_action = Action(
             states=[
@@ -183,11 +191,7 @@ class Controller:
 
 
         # Get the last state of the last action of the queue
-        last_state = self.hexapod.state
-        if self.action_queue:
-            last_state = self.action_queue[-1].states[-1]
-
-        current_state = last_state.copy()
+        current_state = self.get_last_state_in_queue()
 
         if body_position is not None:
             current_state.body_position = body_position
@@ -210,67 +214,34 @@ class Controller:
         )
         self.add_action(reach_action)
 
-    def set_legs_positions(self, duration, legs_positions):
+    def set_legs_positions(self, duration, legs_positions, indices=None):
         """
-        Set the legs positions, specified in origin frame.
+        Set the legs positions, specified in origin frame. You can either set the
+        positions for all the legs, in which case the size of the legs_positions
+        array should be (6, 3), or of a subset of them, in which case the array
+        should be smaller and the indices array should be provided.
 
         Parameters:
             duration (float): Time in seconds to interpolate to the target angles.
             legs_positions (np.ndarray): End-effector positions origin frame.
-                Defaults to the value in the last state, if any.
+                If no indices are provided, the size of the array should be
+                (6, 3). If the indices array is provided the array can be smaller.
+            indices (list): Indices of the legs for which we are specifying the
+                target position.
         """
 
         assert duration > 0, f"The duration cannot be < 0."
-        assert legs_positions.shape == (6, 3), f"Invalid leg position: {legs_positions}."
+        assert ((legs_positions.shape == (6, 3) and indices is None) or
+                (legs_positions.shape[0] <= 6 and indices is not None)), f"Invalid leg position: {legs_positions}."
 
         # Get the last state of the last action of the queue
-        last_state = self.hexapod.state
-        if self.action_queue:
-            last_state = self.action_queue[-1].states[-1]
+        current_state = self.get_last_state_in_queue()
 
-        current_state = last_state.copy()
-        current_state.joint_values = self.hexapod.inverse_kinematics_origin_frame(
-            legs_positions,
-            current_state.body_position,
-            current_state.body_orientation
-        )
-
-        reach_action = Action(
-            states=[
-                current_state
-            ],
-            durations=[duration],
-            name='set_legs_positions'
-        )
-        self.add_action(reach_action)
-
-    def set_leg_position(self, duration, leg_index, leg_position):
-        """
-        Set the position of the specified leg. The target is specified in origin frame.
-
-        Parameters:
-            duration (float): Time in seconds to interpolate to the target angles.
-            leg_index (int): Leg index.
-            leg_position (np.ndarray): End-effector positions origin frame.
-                Defaults to the value in the last state, if any.
-        """
-
-        assert duration > 0, f"The duration cannot be < 0."
-        assert 0 <= leg_index <= 5, f"Leg index out of range: {leg_index}."
-        assert leg_position.shape == (3, ), f"Invalid leg position: {leg_position}."
-
-        # Get the last state of the last action of the queue
-        last_state = self.hexapod.state
-        if self.action_queue:
-            last_state = self.action_queue[-1].states[-1]
-
-        current_state = last_state.copy()
-
-        legs_positions = current_state.legs_positions
-        legs_positions[leg_index] = leg_position
+        current_legs_positions = current_state.legs_positions
+        current_legs_positions[indices] = legs_positions
 
         current_state.joint_values = self.hexapod.inverse_kinematics_origin_frame(
-            legs_positions,
+            current_legs_positions,
             current_state.body_position,
             current_state.body_orientation
         )
@@ -286,7 +257,8 @@ class Controller:
 
     def reach(self, duration, legs_positions=None, body_position=None, body_orientation=None):
         """
-        Reach a target configuration (body pose + legs positions).
+        Reach a target configuration (body pose + legs positions). The legs will move directly
+        to the target position.
 
         Parameters:
             duration (float): Time in seconds to interpolate to the target angles.
@@ -307,11 +279,7 @@ class Controller:
             assert body_orientation.shape == (3,), f"Invalid body orientation: {body_position}."
 
         # Get the last state of the last action of the queue
-        last_state = self.hexapod.state
-        if self.action_queue:
-            last_state = self.action_queue[-1].states[-1]
-
-        current_state = last_state.copy()
+        current_state = self.get_last_state_in_queue()
 
         if legs_positions is not None:
             current_state.legs_positions = legs_positions
@@ -337,4 +305,91 @@ class Controller:
         )
         self.add_action(reach_action)
 
+    def sit(self, duration):
+        """
+        Make the robot sit, retracting the legs near their maximum. In this case
+        we don't know the body position and orientation so we will perform
+        the movement in three phases:
+        1. a reset phase, where we reset the body orientation to (0, 0, 0)
+        2. a lowering phase, where we bring the body to the ground by setting the body position to (0, 0, 0)
+        3. a retract phase, where we retract the legs as much as we can
 
+        Parameters:
+            duration (float): Time in seconds to interpolate to the target angles.
+        """
+
+        assert duration > 0, f"The duration cannot be < 0."
+
+        # Get the last state of the last action of the queue
+        current_state = self.get_last_state_in_queue()
+
+        # Reset phase
+        reset_joint_values = self.hexapod.inverse_kinematics_origin_frame(
+            current_state.legs_positions,
+            current_state.body_position,
+            np.zeros(3)
+        )
+
+        reset_phase = State(
+            current_state.legs_positions,
+            current_state.body_position,
+            np.zeros(3),
+            reset_joint_values
+        )
+
+        # Lowering phase
+        lowering_joint_values = self.hexapod.inverse_kinematics_origin_frame(
+            current_state.legs_positions,
+            np.zeros(3),
+            np.zeros(3)
+        )
+
+        lowering_phase = State(
+            current_state.legs_positions,
+            np.zeros(3),
+            np.zeros(3),
+            lowering_joint_values
+        )
+
+        # Retract phase
+
+        # TODO fix this, for the real robot this should be better
+        # retract_joint_values = self.hexapod.min_angles
+        retract_joint_values = np.array(
+            [
+                [0, -np.deg2rad(60), np.deg2rad(90)],
+                [0, -np.deg2rad(60), np.deg2rad(90)],
+                [0, -np.deg2rad(60), np.deg2rad(90)],
+                [0, np.deg2rad(60), np.deg2rad(90)],
+                [0, np.deg2rad(60), np.deg2rad(90)],
+                [0, np.deg2rad(60), np.deg2rad(90)]
+            ]
+        )
+
+        new_legs_positions = self.hexapod.forward_kinematics(
+            retract_joint_values,
+            np.zeros(3),
+            np.zeros(3)
+        )
+
+        retract_phase = State(
+            new_legs_positions,
+            np.zeros(3),
+            np.zeros(3),
+            retract_joint_values
+        )
+
+        sit_action = Action(
+            states=[
+                reset_phase,
+                lowering_phase,
+                retract_phase
+            ],
+            durations=[
+                duration / 3,
+                duration / 3,
+                duration / 3
+            ],
+            name='sit'
+        )
+        self.add_action(sit_action)
