@@ -223,6 +223,13 @@ class Hexapod(HexapodModel):
             leg_angles[1] -= offset
             leg_angles[2] += offset
 
+        # Mirror some angles
+        for i, leg_angles in enumerate(translated_angles):
+            if i > 2:
+                leg_angles[1] *= -1
+            if i <= 2:
+                leg_angles[2] *= -1
+
         return np.array(translated_angles)
 
     def check(self, angles):
