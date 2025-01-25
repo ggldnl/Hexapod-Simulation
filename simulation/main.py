@@ -1,3 +1,7 @@
+import sys
+sys.path.append('../Hexapod-Controller/controller')
+print(f'Controller successfully imported.')
+
 import pybullet as p
 import pybullet_utils.bullet_client as bc
 import pybullet_data
@@ -8,8 +12,8 @@ import argparse
 import json
 import time
 
-from simulation.controller import Controller
-from simulation.hexapod import VirtualHexapod
+from controller import Controller
+from hexapod import VirtualHexapod
 
 
 if __name__ == '__main__':
