@@ -135,9 +135,6 @@ if __name__ == '__main__':
         # Homing
         controller.sit(5)
 
-        # Raise and lower leg
-        # controller.test_tripod_gait(60, 60, 10, np.pi/4)
-
         while p.isConnected():
 
             # Step the simulations

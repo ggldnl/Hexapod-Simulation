@@ -56,7 +56,8 @@ class VirtualHexapod(HexapodModel):
         self.state = State(legs_positions, body_position, body_orientation, joint_values)
 
     def get_joint_values(self):
-        return self.state.joint_values
+        joint_angles = self.state.joint_angles
+        return self.translate(joint_angles)
 
     @staticmethod
     def map_range(value, in_min, in_max, out_min, out_max):
@@ -91,26 +92,6 @@ class VirtualHexapod(HexapodModel):
             if i > 2:
                 leg_angles[1] *= -1
 
-        return translated_angles
-
-    def inverse_kinematics_leg_frame(self, legs_positions, body_position=None, body_orientation=None):
-        # All the target points are supposed to be in leg frame
-        joint_values = super().inverse_kinematics_leg_frame(
-            legs_positions,
-            body_position,
-            body_orientation
-        )
-        translated_angles = self.translate(joint_values)
-        return translated_angles
-
-    def inverse_kinematics_origin_frame(self, legs_positions, body_position=None, body_orientation=None):
-        # All the target points are supposed to be in body frame
-        joint_values = super().inverse_kinematics_origin_frame(
-            legs_positions,
-            body_position,
-            body_orientation
-        )
-        translated_angles = self.translate(joint_values)
         return translated_angles
 
 def draw(hexapod, body_position=None, body_orientation=None):
