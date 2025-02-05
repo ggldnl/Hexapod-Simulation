@@ -1,0 +1,8 @@
+name: hexapod-sim
+channels:
+  - conda-forge
+dependencies:
+  - pyserial
+  - pip
+  - numpy
+  - pybullet
