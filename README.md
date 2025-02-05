@@ -1,37 +1,34 @@
 # Hexapod Simulation
 
-This repository includes the robot's URDF and python code to simulate the gait of the hexapod in a PyBullet environment. 
+This repository includes the code to simulate the hexapod in a PyBullet environment. 
 
 For a complete overview of the project, refer to the [main Hexapod repository](https://github.com/ggldnl/Hexapod).
 
 ## 🛠️ Build and deployment
 
-### Installation
-
 1. Clone the repository:
-    ```bash
+
+   ```bash
     git clone https://github.com/ggldnl/Hexapod-Simulation.git
     ```
 2. Create a conda environment:
+
     ```bash
     mamba env create -f environment.yml
     mamba activate hexapod-sim
     ```
 
-### 🚀 Delpoy
+## 🚀 Delpoy
 
-1. Run the simulation script:
-   ```bash
-   python simulation/main.py
-   ```
+Run the main simulation script; this will just show the hexapod performing a set of predefined actions:
 
-## 📝 Notes
-
-This simulation is based on early-stage code and serves as a prototype. A polished version of the same code will be hosted on the [Controller repository](https://github.com/ggldnl/Hexapod-Controller). 
+```bash
+python simulation/main.py
+```
 
 ## TODO
 
-- [ ] Add documentation on how to interpret simulation results.
+- [ ] Develop genetic algorithm to learn gait patterns.
 - [ ] Provide a way to select gait strategy from terminal.
 - [ ] Provide videos of the simulation.
 
