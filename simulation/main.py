@@ -117,22 +117,48 @@ if __name__ == '__main__':
         # Define the actions the robot will execute
 
         # Stand and wait a little
-        controller.stand(2)
+        controller.stand(5)
 
         # Look around
         controller.set_body_pose(2, body_orientation=np.array([0, np.deg2rad(10), np.deg2rad(10)]))
         controller.set_body_pose(2, body_orientation=np.array([0, np.deg2rad(-10), np.deg2rad(-10)]))
         controller.set_body_pose(2, body_orientation=np.array([0, 0, 0]))
 
-        # Hop some legs
-        current_leg_position = controller.get_last_state_in_queue().legs_positions[0]
-        new_leg_position = current_leg_position.copy()
-        new_leg_position[2] = 60
+        # Move a leg along its relative axis
+        leg_index = 0
+        offset = 50
+        x, y, z = 80, 0, 0  # Add an offset to the x to fall in the reachable workspace
 
-        controller.set_legs_positions(2, new_leg_position, indices=[0])
-        controller.set_legs_positions(2, current_leg_position, indices=[0])
+        # Move by a certain amount in the leg's x-axis
+        controller.set_legs_positions(2, np.array([[x, y, z]]), indices=[leg_index], leg_frame=True)
+        controller.set_legs_positions(2, np.array([[x + offset, y, z]]), indices=[leg_index], leg_frame=True)
+        controller.set_legs_positions(2, np.array([[x, y, z]]), indices=[leg_index], leg_frame=True)
 
-        # Homing
+        # Move by a certain amount in the leg's y-axis
+        controller.set_legs_positions(2, np.array([[x, y, z]]), indices=[leg_index], leg_frame=True)
+        controller.set_legs_positions(2, np.array([[x, y + offset, z]]), indices=[leg_index], leg_frame=True)
+        controller.set_legs_positions(2, np.array([[x, y, z]]), indices=[leg_index], leg_frame=True)
+
+        # Move by a certain amount in the leg's z-axis by following a straight line
+        delta=10
+        x, y = 150, 0
+        for _ in range(3):
+            for i in range(-50, 50, delta):
+                controller.set_legs_positions(0.1, np.array([[x, y, i]]), indices=[leg_index], leg_frame=True)
+            for i in range(50, -50, -delta):
+                controller.set_legs_positions(0.1, np.array([[x, y, i]]), indices=[leg_index], leg_frame=True)
+
+        # Move the same leg on points expressed in the origin frame, drawing a square
+        x, y, z = 150, 150, 100
+        offset = 50
+
+        controller.set_legs_positions(2, np.array([[x, y, z]]), indices=[leg_index])
+        controller.set_legs_positions(2, np.array([[x + offset, y, z]]), indices=[leg_index])
+        controller.set_legs_positions(2, np.array([[x + offset, y + offset, z]]), indices=[leg_index])
+        controller.set_legs_positions(2, np.array([[x, y + offset, z]]), indices=[leg_index])
+        controller.set_legs_positions(2, np.array([[x, y, z]]), indices=[leg_index])  # Go back to the starting point
+
+        # Sit and terminate the test script
         controller.sit(5)
 
         while p.isConnected():
