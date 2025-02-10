@@ -65,7 +65,8 @@ class VirtualHexapod(HexapodModel):
 
     def translate(self, angles):
         """
-        Transform the angles in way that the robot moves consistently in a simulated environment.
+        Transform the angles such that the robot moves consistently in the simulated environment
+        with respect to the mathematical model.
 
         Parameters:
             angles (np.ndarray): Joint angles.
@@ -77,15 +78,17 @@ class VirtualHexapod(HexapodModel):
             leg_angles = [
                 leg_angles[0],  # Coxa angle is the same
                 self.map_range(leg_angles[1], np.pi / 2, -np.pi / 2, 0, np.pi),
-                self.map_range(leg_angles[2], -np.pi / 2, np.pi / 2, 0, -np.pi)
+                self.map_range(leg_angles[2], -np.pi / 2, np.pi / 2, 0, np.pi)
             ]
             translated_angles[i] = leg_angles
 
         # Apply offsets to the angles
-        offset = np.deg2rad(25)
+        femur_offset = np.deg2rad(25)
+        tibia_offset = np.deg2rad(50)
         for i, leg_angles in enumerate(translated_angles):
-            leg_angles[1] -= offset
-            leg_angles[2] += offset
+            leg_angles[1] -= femur_offset
+            leg_angles[2] += femur_offset
+            leg_angles[2] -= tibia_offset
 
         # Mirror left legs
         for i, leg_angles in enumerate(translated_angles):
@@ -201,7 +204,7 @@ if __name__ == '__main__':
     import json
 
     parser = argparse.ArgumentParser(description="Code to be run on the Hexapod")
-    parser.add_argument("-c", "--config", type=str, default='simulation/config/config.json',
+    parser.add_argument("-c", "--config", type=str, default='Hexapod-Controller/config/config.json',
                         help="Path to the robot's configuration file")
     parser.add_argument('-n', '--name', type=str, default='hexapod', help="Name of the robot in the config")
     parser.add_argument('-X', '--body-x', type=float, default=0, help="Body x coordinate")
