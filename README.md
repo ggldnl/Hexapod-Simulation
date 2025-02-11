@@ -4,10 +4,6 @@ This repository includes the code to simulate the hexapod in a PyBullet environm
 
 For a complete overview of the project, refer to the [main Hexapod repository](https://github.com/ggldnl/Hexapod).
 
-## 🎬 Videos
-
-
-
 ## 🛠️ Build and deployment
 
 1. Clone the repository:
@@ -32,7 +28,7 @@ For a complete overview of the project, refer to the [main Hexapod repository](h
   
     [![actions](https://img.youtube.com/vi/msuydRaIWuU/0.jpg)](https://www.youtube.com/watch?v=msuydRaIWuU)
 
-- `showcase_gaits.py` will show the hexapod move with different predefined open-loop gaits (e.g. tri gait, ripple gait, ...);
+- `showcase_gaits.py` will show the hexapod move with different predefined open-loop gaits (e.g. tri-gait, ripple-gait, ...);
 
    ```bash
    python simulation/showcase_gaits.py
@@ -49,7 +45,6 @@ You can even run the `hexapod.py` file to plot the kinematic structure of the ro
 ## TODO
 
 - [ ] Develop genetic algorithm to learn gait patterns.
-- [ ] Provide videos of the simulation.
 
 ## 🤝 Contribution
 
