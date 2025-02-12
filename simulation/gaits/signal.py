@@ -1,48 +1,42 @@
 import numpy as np
 
 
-class ControlSignal:
+def control_signal(amplitude, phase, duty_cycle, scale, array_dim=100):
+    """
+    Create a smooth periodic function with amplitude, phase, and duty cycle.
+    """
 
-    def __init__(self, array_dim=100):
-        self.array_dim = array_dim
-        self.trajectories = np.zeros(array_dim)
+    assert 0 <= amplitude <= 1
+    assert 0 <= phase <= 1
+    assert 0 <= duty_cycle <= 1
 
-    def step(self, dt):
-        k = int(np.floor(dt * self.array_dim)) % self.array_dim
-        return self.trajectories[:, k]
+    # Compute uptime based on the duty cycle
+    up_time = int(array_dim * duty_cycle)
 
-    def _control_signal(self, amplitude, phase, duty_cycle):
-        """
-        Create a smooth periodic function with amplitude, phase, and duty cycle.
-        """
+    # Create a square function
+    temp = np.array([amplitude if i < up_time else -amplitude for i in range(array_dim)])
 
-        assert 0 <= amplitude <= 1
-        assert 0 <= phase <= 1
-        assert 0 <= duty_cycle <= 1
+    # Apply kernel smoothing (kernel size is based 1/10 of the total size of the array)
+    kernel_size = array_dim // 10
+    sigma = kernel_size / 3
 
-        # Compute uptime based on the duty cycle
-        up_time = int(self.array_dim * duty_cycle)
+    # Create a gaussian kernel
+    kernel = np.exp(-np.square(np.arange(-kernel_size, kernel_size + 1)) / (2 * sigma ** 2))
+    kernel /= (sigma * np.sqrt(np.pi))
+    kernel /= kernel.sum()
 
-        # Create a square function
-        temp = np.array([amplitude if i < up_time else -amplitude for i in range(self.array_dim)])
+    # Apply kernel smoothing to the square function
+    command = np.convolve(temp, kernel, mode='same')
 
-        # Apply kernel smoothing (kernel size is based 1/10 of the total size of the array)
-        kernel_size = self.array_dim // 10
-        sigma = kernel_size / 3
+    # Apply phase shift
+    start = int(array_dim * phase)
+    final_command = np.roll(command, -start)
 
-        # Create a gaussian kernel
-        kernel = np.exp(-np.square(np.arange(-kernel_size, kernel_size + 1)) / (2 * sigma ** 2))
-        kernel /= (sigma * np.sqrt(np.pi))
-        kernel /= kernel.sum()
+    # Scale the signal
+    final_command *= scale
 
-        # Apply kernel smoothing to the square function
-        command = np.convolve(temp, kernel, mode='same')
+    return final_command
 
-        # Apply phase shift
-        start = int(self.array_dim * phase)
-        final_command = np.roll(command, -start)
-
-        return final_command
 
 if __name__ == '__main__':
 
@@ -57,14 +51,13 @@ if __name__ == '__main__':
     parser.add_argument('--duty_cycle', type=float, default=0.5, help='Duty cycle')
     args = parser.parse_args()
 
-    control = ControlSignal(args.array_dim)
-    control.trajectories = control._control_signal(args.amplitude, args.phase, args.duty_cycle)
+    trajectories = control_signal(args.amplitude, args.phase, args.duty_cycle, args.array_dim)
 
     # Time steps
     time = np.linspace(0, 1, args.array_dim)
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=time, y=control.trajectories, mode='lines', name='Control Signal'))
+    fig.add_trace(go.Scatter(x=time, y=trajectories, mode='lines', name='Control Signal'))
 
     fig.update_layout(
         title='Generated Control Signal',
