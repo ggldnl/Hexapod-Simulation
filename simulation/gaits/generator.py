@@ -1,4 +1,4 @@
-from .signal import control_signal
+from signal import control_signal
 
 import numpy as np
 
