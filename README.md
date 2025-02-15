@@ -42,7 +42,7 @@ For a complete overview of the project, refer to the [main Hexapod repository](h
      python simulation/showcase_sinusoidal_signal_gaits.py
    ```
   
-  [![actions](https://img.youtube.com/vi/y8lKrPwmJ80/0.jpg)](https://www.youtube.com/watch?v=y8lKrPwmJ80)
+  [![actions](https://img.youtube.com/vi/W5BeiLtARxg/0.jpg)](https://www.youtube.com/watch?v=W5BeiLtARxg)
 
   Note: motion feels a little jerky but this is definitely my fault and can probably be solved by better tuning the gait parameters. I have no plan to continue working on this kind of gait strategy. 
 
