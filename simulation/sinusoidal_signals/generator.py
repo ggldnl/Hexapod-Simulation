@@ -1,6 +1,42 @@
-from signal import control_signal
-
 import numpy as np
+
+
+def control_signal(amplitude, phase, duty_cycle, offset, array_dim=100):
+    """
+    Create a smooth periodic function with amplitude, phase, and duty cycle
+    """
+
+    assert 0 <= amplitude <= 1
+    assert 0 <= phase <= 1
+    assert 0 <= duty_cycle <= 1
+    assert -1 <= offset <= 1
+
+    # Compute uptime based on the duty cycle
+    up_time = int(array_dim * duty_cycle)
+
+    # Create a square function
+    temp = np.array([amplitude if i < up_time else -amplitude for i in range(array_dim)])
+
+    # Apply kernel smoothing (kernel size is based 1/10 of the total size of the array)
+    kernel_size = array_dim // 10
+    sigma = kernel_size / 3
+
+    # Create a gaussian kernel
+    kernel = np.exp(-np.square(np.arange(-kernel_size, kernel_size + 1)) / (2 * sigma ** 2))
+    kernel /= (sigma * np.sqrt(np.pi))
+    kernel /= kernel.sum()
+
+    # Apply kernel smoothing to the square function
+    command = np.convolve(temp, kernel, mode='same')
+
+    # Apply phase shift
+    start = int(array_dim * phase)
+    final_command = np.roll(command, -start)
+
+    # Apply offset
+    final_command += offset
+
+    return final_command
 
 
 class OpenLoopGaitGenerator:
@@ -20,7 +56,7 @@ class OpenLoopGaitGenerator:
         # Params has the following structure:
         # - one element for each leg
         # - for each leg, one element for each joint
-        # - for each joint, one element for each parameter (4 i.e. amplitude, phase, duty_cycle, scale)
+        # - for each joint, one element for each parameter (3 i.e. amplitude, phase and duty_cycle)
         # We need to produce a single control input for each joint:
         # - one element for each leg
         # - for each leg, one control input per joint
@@ -40,7 +76,7 @@ class OpenLoopGaitGenerator:
 
 if __name__ == '__main__':
 
-    from gaits import Gait
+    from gaits import Gaits
 
     import plotly.graph_objects as go
     import argparse
@@ -51,7 +87,7 @@ if __name__ == '__main__':
     parser.add_argument('--gait', type=str, default="TRI_GAIT", help='Gait type')
     args = parser.parse_args()
 
-    gait = Gait[args.gait]
+    gait = Gaits[args.gait]
     gait_params = gait.data
     print(f'Selected gait: {gait.label}')
 

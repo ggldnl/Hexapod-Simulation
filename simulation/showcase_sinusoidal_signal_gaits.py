@@ -1,29 +1,30 @@
-import sys
-sys.path.append('../Hexapod-Controller/controller')
-print(f'Controller successfully imported.')
-
 import pybullet as p
 import pybullet_utils.bullet_client as bc
 import pybullet_data
 
 from pathlib import Path
+import numpy as np
 import argparse
 import json
 import time
 
-
-from controller import Controller
-
-from gaits.generator import OpenLoopGaitGenerator
-from gaits.gaits import Gait
+from sinusoidal_signals.generator import OpenLoopGaitGenerator
+from sinusoidal_signals.gaits import Gaits
 from hexapod import VirtualHexapod
+
+
+def map_signals(signals, min_angles, max_angles):
+    return ((signals + 1) / 2) * (max_angles - min_angles) + min_angles
 
 
 if __name__ == '__main__':
     """
-    Showcase predefined open-loop gait patterns. Open-loop controllers are based on 
-    periodic signals and thus do not take into account external factors.
+    Showcase sinusoidal open-loop gait patterns.
+    - Open-loop: do not take into account external factors such as ground contact.
+    - Sinusoidal: use sinusoidal signals to control each joint during the gait. Each signal
+        is defined by amplitude, phase, duty_cycle and vertical_offset. 
     The code is based on the paper "Robots that can adapt like animals" by Cully et al., Nature, 2015
+    but adapted to our use case (e.g. introduced vertical offset of the signals, tweaked gait parameters, ...).
     """
 
     parser = argparse.ArgumentParser(description="Showing predefined open-loop gait patterns.")
@@ -38,7 +39,7 @@ if __name__ == '__main__':
 
     # ------------------------------ Gait generator ------------------------------ #
 
-    selected_gait = Gait[args.gait]
+    selected_gait = Gaits[args.gait]
     print(f'Selected gait: {selected_gait.label}')
     open_loop_gait_generator = OpenLoopGaitGenerator(selected_gait.data)
 
@@ -50,7 +51,10 @@ if __name__ == '__main__':
 
     # Create a virtual robot to use in simulation
     hexapod = VirtualHexapod(config[args.name])
-    controller = Controller(hexapod)
+
+    # Out of simplicity, we can say that all the angles should be in range -np.pi/2, np.pi/2
+    min_angles = np.full((6, 3), -np.pi/2)
+    max_angles = np.full((6, 3), np.pi/2)
 
     # --------------------------------- PyBullet --------------------------------- #
 
@@ -65,9 +69,9 @@ if __name__ == '__main__':
     p.configureDebugVisualizer(p.COV_ENABLE_SHADOWS, 0)  # Disable shadows
 
     # Set initial camera view
-    default_camera_distance = 0.5
+    default_camera_distance = 0.8
     default_camera_roll = 0
-    default_camera_yaw = 0
+    default_camera_yaw = -45
     default_camera_pitch = -45
     default_camera_target = [0, 0, 0]
 
@@ -128,19 +132,14 @@ if __name__ == '__main__':
         # dt = 1. / 240.
         dt = args.dt
 
-        # Stand and wait a little
-        controller.stand(5)
-
-        # TODO provide a way to give the joint angles directly to the controller
-        #   in order to mix the gait with other actions
-
         while p.isConnected():
 
             # Step the simulations
             physics.stepSimulation()
 
             # Get the joint angles
-            joint_angles = open_loop_gait_generator.step(t)
+            signals = open_loop_gait_generator.step(t)
+            joint_angles = map_signals(signals, min_angles, max_angles)
 
             for i in range(6):
 
