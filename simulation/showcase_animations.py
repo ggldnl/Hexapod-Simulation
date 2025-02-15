@@ -42,7 +42,7 @@ if __name__ == '__main__':
     # Connect to physics server
     # physics = p.connect(p.GUI)
 
-    physics = bc.BulletClient(connection_mode=p.GUI)
+    physics = bc.BulletClient(connection_mode=p.GUI, options="--width=1980 --height=1080")
     physics.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
     physics.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0)
     physics.configureDebugVisualizer(p.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
@@ -184,6 +184,10 @@ if __name__ == '__main__':
     finally:
 
         print('Disconnected.')
+
+        # Stop the recording
+        if args.video_path:
+            p.stopStateLogging(p.STATE_LOGGING_VIDEO_MP4)
 
         # Disconnect from the simulations when done
         physics.disconnect()
