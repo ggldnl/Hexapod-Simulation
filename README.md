@@ -37,7 +37,7 @@ For a complete overview of the project, refer to the [main Hexapod repository](h
   Since no high-level controller is involved, I set the range of motion of each joint to [-90, 90] degs. The signals are centered at 0 and have values in range [-1, 1]. They get mapped in a range belonging to [-90, 90] defined by the amplitude with no way of changing the center of the interval. This is a problem if we need the output joint value to have a different range (e.g. legs not parallel -> coxas will need different ranges to produce coordinated motion). For this reason I introduced another parameter for the signal generation:
   - vertical shift (center of the signal);
 
-  In my opinion, while there are undoubtedly advantages to using this approach (as described in the paper), this control strategy is difficult to use and adapt and I think other approaches might worth exploring.
+  In my opinion, while there are undoubtedly advantages to using this approach (as described in the paper), this control strategy is difficult to use and adapt and I think other approaches might be worth exploring.
 
    ```bash
      python simulation/showcase_sinusoidal_signal_gaits.py
