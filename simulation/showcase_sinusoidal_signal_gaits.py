@@ -5,12 +5,10 @@ import pybullet_data
 from pathlib import Path
 import numpy as np
 import argparse
-import json
 import time
 
 from sinusoidal_signals.generator import OpenLoopGaitGenerator
 from sinusoidal_signals.gaits import Gaits
-from hexapod import VirtualHexapod
 
 
 def map_signals(signals, min_angles, max_angles):
@@ -30,7 +28,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Showing predefined open-loop gait patterns.")
     parser.add_argument("-g", "--gait", type=str, default='TRI_GAIT', help="Gait")
     parser.add_argument("-u", "--URDF", type=str, default='Hexapod-Hardware/hexapod.urdf', help="Path to the robot's URDF")
-    parser.add_argument("-c", "--config", type=str, default='Hexapod-Controller/config/config.json', help="Path to the robot's configuration file")
     parser.add_argument('-n', '--name', type=str, default='hexapod', help="Name of the robot in the config")
     parser.add_argument('-d', '--dt', type=float, default=0.02, help="Time delta for update (default=0.02=50Hz)")
     parser.add_argument('-v', '--video_path', type=str, default=None, help="If provided, the script will save an mp4 of the simulation on the path")
@@ -43,14 +40,7 @@ if __name__ == '__main__':
     print(f'Selected gait: {selected_gait.label}')
     open_loop_gait_generator = OpenLoopGaitGenerator(selected_gait.data)
 
-    # -------------------------------- Controller -------------------------------- #
-
-    # Read the JSON
-    with open(args.config) as f:
-        config = json.load(f)
-
-    # Create a virtual robot to use in simulation
-    hexapod = VirtualHexapod(config[args.name])
+    # ------------------------------- Joint limits ------------------------------- #
 
     # Out of simplicity, we can say that all the angles should be in range -np.pi/2, np.pi/2
     min_angles = np.full((6, 3), -np.pi/2)
