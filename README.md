@@ -9,7 +9,7 @@ For a complete overview of the project, refer to the [main Hexapod repository](h
 1. Clone the repository:
 
    ```bash
-    git clone https://github.com/ggldnl/Hexapod-Simulation.git
+    git clone --recursive https://github.com/ggldnl/Hexapod-Simulation.git
     ```
 2. Create a conda environment:
 
