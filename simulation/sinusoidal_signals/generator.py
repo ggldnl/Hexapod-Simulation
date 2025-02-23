@@ -39,7 +39,7 @@ def control_signal(amplitude, phase, duty_cycle, offset, array_dim=100):
     return final_command
 
 
-class OpenLoopGaitGenerator:
+class SinusoidalSignalGaitGenerator:
 
     def __init__(self, params, array_dim=100):
         self.params = params
@@ -91,7 +91,7 @@ if __name__ == '__main__':
     gait_params = gait.data
     print(f'Selected gait: {gait.label}')
 
-    open_loop_gait_generator = OpenLoopGaitGenerator(gait_params, args.array_dim)
+    open_loop_gait_generator = SinusoidalSignalGaitGenerator(gait_params, args.array_dim)
     trajectories = open_loop_gait_generator.trajectories
 
     leg = 0

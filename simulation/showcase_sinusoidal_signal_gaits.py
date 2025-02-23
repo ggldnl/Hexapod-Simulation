@@ -7,7 +7,7 @@ import numpy as np
 import argparse
 import time
 
-from sinusoidal_signals.generator import OpenLoopGaitGenerator
+from sinusoidal_signals.generator import SinusoidalSignalGaitGenerator
 from sinusoidal_signals.gaits import Gaits
 
 
@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
     selected_gait = Gaits[args.gait]
     print(f'Selected gait: {selected_gait.label}')
-    open_loop_gait_generator = OpenLoopGaitGenerator(selected_gait.data)
+    open_loop_gait_generator = SinusoidalSignalGaitGenerator(selected_gait.data)
 
     # ------------------------------- Joint limits ------------------------------- #
 
