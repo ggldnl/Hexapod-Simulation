@@ -28,13 +28,19 @@ For a complete overview of the project, refer to the [main Hexapod repository](h
   
     [![actions](https://img.youtube.com/vi/msuydRaIWuU/0.jpg)](https://www.youtube.com/watch?v=msuydRaIWuU)
 
+- `showcase_gaits.py` will show the hexapod move with different gait strategies.
+
+   ```bash
+   python simulation/showcase_gaits.py
+   ```
+
 - `showcase_sinusoidal_signal_gaits.py` will show the hexapod move with open-loop gaits based on sinusoidal signals as described in the paper "Robots that can adapt like animals" by Cully et al., Nature, 2015.
   In this approach, each joint is controlled by a periodic signal defined by:
   - amplitude (range of motion);
   - phase (relative timing of the movement in a period);
   - duty cycle (proportion of time de movement lasts);
 
-  Since no high-level controller is involved, I set the range of motion of each joint to [-90, 90] degs. The signals are centered at 0 and have values in range [-1, 1]. They get mapped in a range belonging to [-90, 90] defined by the amplitude with no way of changing the center of the interval. This is a problem if we need the output joint values to have a different range (e.g. legs not parallel -> coxas will need different ranges to produce coordinated motion). For this reason I introduced another parameter for the signal generation:
+  Since no high-level controller is involved, I set the range of motion of each joint to [-90, 90] degs. The signals are centered at 0 and have values in range [-1, 1] and they get mapped to the joint range scaled by the amplitude. There is no way of changing the center of the signal. This is a problem if we need the output joint values to have a different range (e.g. legs not parallel -> coxas will need different ranges to produce coordinated motion). For this reason I introduced another parameter for the signal generation:
   - vertical shift (center of the signal);
 
   In my opinion, while there are undoubtedly advantages to using this approach (as described in the paper), this control strategy is difficult to use and adapt and I think other approaches might be worth exploring.
@@ -47,17 +53,7 @@ For a complete overview of the project, refer to the [main Hexapod repository](h
 
   Note: motion feels a little jerky but this is definitely my fault and can probably be solved by better tuning the gait parameters. I have no plan to continue working on this kind of gait strategy. 
 
-- `showcase_genetics.py` will show the hexapod learn a gait strategy with a genetic algorithm;
-
-   ```bash
-   python simulation/showcase_genetics.py
-   ```
-
 You can even run the `hexapod.py` file to plot the kinematic structure of the robot.
-
-## TODO
-
-- [ ] Develop genetic algorithm to learn gait patterns.
 
 ## 🤝 Contribution
 
