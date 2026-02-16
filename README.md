@@ -1,59 +1,55 @@
 # Hexapod Simulation
 
-This repository includes the code to simulate the hexapod in a PyBullet environment. 
+This repository includes the code to simulate the Hexapod. 
+It includes code to visualize and interact with the robot in Viser and code to simulate it in a PyBullet environment. 
 
 For a complete overview of the project, refer to the [main Hexapod repository](https://github.com/ggldnl/Hexapod).
 
-## 🛠️ Build and deployment
+## 🛠️ Setup
+
+Before you start, ensure `mamba` is properly installed on the machine you are using for the simulation.
 
 1. Clone the repository:
 
    ```bash
     git clone --recursive https://github.com/ggldnl/Hexapod-Simulation.git
     ```
-2. Create a conda environment:
+   
+   The [Hexapod-Controller](https://github.com/ggldnl/Hexapod-Controller.git) and [Hexapod-Hardware]((https://github.com/ggldnl/Hexapod-Hardware.git)) repositories are configured as submodules and are automatically downloaded. If for some reason you need to update the submodules in the future:
 
     ```bash
+    # Update the submodules if something changes in the future
+    git submodule update --recursive --remote
+    ```
+
+2. Create a mamba environment:
+
+    ```bash
+    cd Hexapod-Simulation
     mamba env create -f environment.yml
     mamba activate hexapod-sim
     ```
+   
+   The Hexapod-Controller code will be automatically installed as a package. After this, from within the `hexapod-sim` mamba environment, you will be able to do something like this:
 
+   ```python
+   from controller import HexapodController
+   ```
+   
 ## 🚀 Delpoy
 
-- `showcase_animations.py` will show the hexapod performing a set of predefined actions.
+- `viser/main.py` will open a Viser-based Hexapod demo, showing the Hexapod moving forward and performing some adjustments along the way (changing body height, speed, body yaw, ...).  
 
    ```bash
-   python simulation/showcase_animations.py
+   python viser/main.py
    ```
-  
-    [![actions](https://img.youtube.com/vi/msuydRaIWuU/0.jpg)](https://www.youtube.com/watch?v=msuydRaIWuU)
 
-- `showcase_gaits.py` will show the hexapod move with different gait strategies.
+- `bullet/main.py` will open a PyBullet Hexapod simulation, showing how the robot behaves when physics is involved. 
+I used the actual stall torque the servos are rated for to simulate the motors.
 
    ```bash
-   python simulation/showcase_gaits.py
+   python bullet/main.py
    ```
-
-- `showcase_sinusoidal_signal_gaits.py` will show the hexapod move with open-loop gaits based on sinusoidal signals as described in the paper "Robots that can adapt like animals" by Cully et al., Nature, 2015.
-  In this approach, each joint is controlled by a periodic signal defined by:
-  - amplitude (range of motion);
-  - phase (relative timing of the movement in a period);
-  - duty cycle (proportion of time de movement lasts);
-
-  Since no high-level controller is involved, I set the range of motion of each joint to [-90, 90] degs. The signals are centered at 0 and have values in range [-1, 1] and they get mapped to the joint range scaled by the amplitude. There is no way of changing the center of the signal. This is a problem if we need the output joint values to have a different range (e.g. legs not parallel -> coxas will need different ranges to produce coordinated motion). For this reason I introduced another parameter for the signal generation:
-  - vertical shift (center of the signal);
-
-  In my opinion, while there are undoubtedly advantages to using this approach (as described in the paper), this control strategy is difficult to use and adapt and I think other approaches might be worth exploring.
-
-   ```bash
-     python simulation/showcase_sinusoidal_signal_gaits.py
-   ```
-  
-  [![actions](https://img.youtube.com/vi/W5BeiLtARxg/0.jpg)](https://www.youtube.com/watch?v=W5BeiLtARxg)
-
-  Note: motion feels a little jerky but this is definitely my fault and can probably be solved by better tuning the gait parameters. I have no plan to continue working on this kind of gait strategy. 
-
-You can even run the `hexapod.py` file to plot the kinematic structure of the robot.
 
 ## 🤝 Contribution
 

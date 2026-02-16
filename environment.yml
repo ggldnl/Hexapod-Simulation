@@ -2,9 +2,12 @@ name: hexapod-sim
 channels:
   - conda-forge
 dependencies:
-  - pyserial
   - pip
+  - yaml
   - numpy
+  - viser
   - pybullet
-  - plotly
-  - matplotlib
+  - pyserial
+  - pip:
+      - yourdfpy>=0.0.60
+      - -e ./Hexapod-Controller
