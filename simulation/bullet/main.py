@@ -29,7 +29,7 @@ if __name__ == '__main__':
                         help='Strafe velocity (mm/s)')
     parser.add_argument('--vz', '-z', type=float, default=0.0,
                         help='Upward velocity (mm/s)')
-    parser.add_argument('--yaw', '-v', type=float, default=0.0,
+    parser.add_argument('--yaw', '-v', type=float, default=10.0,
                         help="Yaw velocity (deg/s)")
     parser.add_argument('--simulation-rate', '-s', type=float, default=80,
                         help="Simulation update rate in Hz. Default is 80 Hz")
@@ -81,7 +81,7 @@ if __name__ == '__main__':
     # Compute correction so bottom sits on plane (z=0)
     aabb_min, aabb_max = p.getAABB(robotID)
     bottom_z = aabb_min[2]
-    z_correction = -bottom_z
+    z_correction = -bottom_z + 0.1
     pos, orn = p.getBasePositionAndOrientation(robotID)
     p.resetBasePositionAndOrientation(robotID, [pos[0], pos[1], pos[2] + z_correction], orn)
 
@@ -117,10 +117,6 @@ if __name__ == '__main__':
     # Create the controller
     interface = PyBulletInterface(config, robotID, joint_mapping)  # PyBullet simulation interface
     controller = HexapodController(interface, config)
-    controller.set_linear_velocity(args.vx, args.vy, args.vz)
-    controller.set_angular_velocity(args.yaw)
-    controller.set_body_height(80)
-    controller.set_gait(args.gait)
 
     # Video
     if args.video_path:
@@ -130,12 +126,20 @@ if __name__ == '__main__':
     # Simulation loop
     try:
 
-        t = 0.0
+        # Time tracking
         simulation_dt = 1. / args.simulation_rate
         controller_dt = 1. / args.controller_rate
-
-        # Track time until next controller update
         controller_time_accumulator = 0.0
+        t = 0.0
+
+        # Examples
+        t0 = 5.0    # look in one direction
+        t1 = 6.0    # look another direction
+        t2 = 7.0    # reset body orientation
+        t3 = 8.0    # set linear velocity
+        t4 = 12.0   # set angular velocity
+        t5 = 35.0   # stop
+        t6 = 37.0   # shutdown
 
         while p.isConnected():
 
@@ -146,6 +150,41 @@ if __name__ == '__main__':
             if controller_time_accumulator >= controller_dt:
                 outcome = controller.update(controller_dt)
                 controller_time_accumulator -= controller_dt  # Keep remainder for accuracy
+
+            # Example: at t0, look in one direction (change body orientation)
+            if t0 and t >= t0:
+                t0 = None  # invalidate so that we won't change it again
+                controller.set_body_orientation(5, -5, 5)
+
+            # Example: at t1, look to another direction (change again body orientation)
+            if t1 and t >= t1:
+                t1 = None
+                controller.set_body_orientation(-5, -5, -5)
+
+            # Example: at t2, reset body orientation
+            if t2 and t >= t2:
+                t2 = None
+                controller.set_body_orientation(0, 0, 0)
+
+            # Example: at t3, start walking
+            if t3 and t >= t3:
+                t3 = None
+                controller.set_linear_velocity(args.vx, args.vy, args.vz)
+
+            # Example: at t4, change angular velocity
+            if t4 and t >= t4:
+                t4 = None
+                controller.set_angular_velocity(args.yaw)
+
+            # Example: at t5, stop walking
+            if t5 and t >= t5:
+                t5 = None
+                controller.set_linear_velocity(0, 0, 0)
+                controller.set_angular_velocity(0)
+
+            if t6 and t >= t6:
+                t6 = None
+                controller.shutdown()
 
             # Step the simulation at its own rate
             physics.stepSimulation()

@@ -34,11 +34,50 @@ class PyBulletInterface:
         self.servo_min = {leg_name: [coxa_min, femur_min, tibia_min] for leg_name in self.leg_names}
         self.servo_max = {leg_name: [coxa_max, femur_max, tibia_max] for leg_name in self.leg_names}
 
-        self.current_joint_values = {}
+        # Legs are initially set to a random value (we don't know the initial state of the hexapod during boot)
+        self.current_joint_values = {
+            leg: np.array([
+                np.random.uniform(coxa_min / 5, coxa_max / 5),
+                np.random.uniform(femur_min / 5, femur_max / 5),
+                np.random.uniform(tibia_min / 5, tibia_max / 5)
+            ]) for leg in self.leg_names
+        }
 
         # Pybullet objects
         self.robot_id = robot_id
         self.joints = joints
+
+    @property
+    def min_femur_kinematic_space(self):
+        """
+        Returns the angle in kinematic space corresponding to the
+        minimum femur angle realizable in servo space.
+        """
+        return self.servo_space_to_kinematic_space(self.leg_names[0], 1, self.servo_min[self.leg_names[0]][1])
+
+    @property
+    def max_femur_kinematic_space(self):
+        """
+        Returns the angle in kinematic space corresponding to the
+        maximum femur angle realizable in servo space.
+        """
+        return self.servo_space_to_kinematic_space(self.leg_names[0], 1, self.servo_max[self.leg_names[0]][1])
+
+    @property
+    def min_tibia_kinematic_space(self):
+        """
+        Returns the angle in kinematic space corresponding to the
+        minimum tibia angle realizable in servo space.
+        """
+        return self.servo_space_to_kinematic_space(self.leg_names[0], 2, self.servo_min[self.leg_names[0]][2])
+
+    @property
+    def max_tibia_kinematic_space(self):
+        """
+        Returns the angle in kinematic space corresponding to the
+        maximum tibia angle realizable in servo space.
+        """
+        return self.servo_space_to_kinematic_space(self.leg_names[0], 2, self.servo_max[self.leg_names[0]][2])
 
     def _get_joint_position(self, leg: str, joint: int):
         return p.getJointState(self.robot_id, self.joints[leg][joint])[0]
@@ -46,7 +85,8 @@ class PyBulletInterface:
     def _set_joint_position(self, leg: str, joint: int, angle: float):
 
         # Convert the angle to servo space
-        new_angle = self.convert_angle(leg, joint, angle)
+        new_angle = self.kinematic_space_to_servo_space(leg, joint, angle)
+        new_angle_rad = np.radians(new_angle)
 
         """
         Important: this teleports the joint to the exact position immediately. It is only suited
@@ -54,7 +94,7 @@ class PyBulletInterface:
         gradually moves the joint toward the target position. The joints will require multiple simulation
         steps to reach the target position.
         """
-        # p.resetJointState(self.robot_id, self.joints[leg_name][joint_index], new_angle)
+        # p.resetJointState(self.robot_id, self.joints[leg_name][joint_index], new_angle_rad)
 
         """
         MG996R servos are rated for 11kgf.cm @ 6V.
@@ -69,7 +109,7 @@ class PyBulletInterface:
             bodyUniqueId=self.robot_id,
             jointIndex=self.joints[leg][joint],
             controlMode=p.POSITION_CONTROL,
-            targetPosition=new_angle,
+            targetPosition=new_angle_rad,
             force=force,  # Maximum force the motor (MG996R) can apply
             # positionGain=0.8,
             # velocityGain=0.1
@@ -92,7 +132,7 @@ class PyBulletInterface:
     def disable(self):
         self.enabled = False
 
-    def convert_angle(self, leg: str, joint: int, angle: float) -> float:
+    def kinematic_space_to_servo_space(self, leg: str, joint: int, angle: float) -> float:
         """
         Convert angle from kinematic space to PyBullet joint space using config specification.
 
@@ -107,16 +147,30 @@ class PyBulletInterface:
         servo_min = self.servo_min[leg][joint]
         servo_max = self.servo_max[leg][joint]
         clipped_angle = np.clip(angle, servo_min, servo_max)
-        return np.radians(clipped_angle)
+        return clipped_angle
+
+    def servo_space_to_kinematic_space(self, leg: str, joint: int, angle: float) -> float:
+        """
+        Convert angle from Viser joint space back to kinematic space.
+
+        Args:
+            leg: Leg name (e.g. front_right, middle_left, ...)
+            joint: Joint index (0/1/2)
+            angle: Angle in degrees
+        """
+
+        angle -= self.trim[leg][joint]
+        angle /= self.direction[leg][joint]
+        return angle
 
     def set_joint(self, leg: str, joint: int, angle: float) -> bool:
-        """Update only the selected leg/joint."""
+        """Update only the selected leg/joint. Angle is expressed in kinematic space."""
         self.current_joint_values[leg][joint] = angle
         self.update()
         return True
 
-    def set_leg(self, leg: str, angles: list) -> bool:
-        """Update only the selected leg."""
+    def set_leg(self, leg: str, angles: np.ndarray) -> bool:
+        """Update only the selected leg. Angles are expressed in kinematic space."""
         self.current_joint_values[leg] = angles
         self.update()
         return True
@@ -124,12 +178,25 @@ class PyBulletInterface:
     def set_all_legs(self, joint_values: dict) -> bool:
         """
         Set all legs to their respective angles. leg_angles is a dictionary
-        mapping each leg (by name) to a list of angles.
+        mapping each leg (by name) to a list of angles. Angles are expressed
+        in kinematic space.
         e.g. front_right: [90, 0, 0]
         """
         self.current_joint_values = joint_values
         self.update()
         return True
+
+    def get_joint(self, leg: str, joint: int) -> float:
+        """Get the selected leg/joint (kinematic space)."""
+        return float(self.current_joint_values[leg][joint])
+
+    def get_leg(self, leg: str) -> np.ndarray:
+        """Get the selected leg (kinematic space)."""
+        return self.current_joint_values[leg]
+
+    def get_all_legs(self) -> dict:
+        """Get the current leg angles (kinematic space)."""
+        return self.current_joint_values
 
     def get_voltage(self) -> float:
         """Return mock voltage value."""
