@@ -196,7 +196,7 @@ if __name__ == '__main__':
 
         # Stop the recording
         if args.video_path:
-            physics.stopStateLogging(p.STATE_LOGGING_VIDEO_MP4)
+            p.stopStateLogging(p.STATE_LOGGING_VIDEO_MP4)
 
         # Disconnect from the simulations when done
         physics.disconnect()
