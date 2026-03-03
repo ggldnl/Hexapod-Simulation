@@ -3,6 +3,17 @@
 This repository includes the code to simulate the Hexapod. 
 It includes code to visualize and interact with the robot in Viser and code to simulate it in a PyBullet environment. 
 
+<table>
+  <tr>
+    <td><img src="media/tripod.gif" alt="Tripod gait"></td>
+    <td><img src="media/wave.gif" alt="Wave gait"></td>
+  </tr>
+  <tr>
+    <td><img src="media/look_around.gif" alt="Looking around"></td>
+    <td><img src="media/ripple.gif" alt="Ripple gait"></td>
+  </tr>
+</table>
+
 For a complete overview of the project, refer to the [main Hexapod repository](https://github.com/ggldnl/Hexapod).
 
 ## 🛠️ Setup
@@ -38,17 +49,17 @@ Before you start, ensure `mamba` is properly installed on the machine you are us
    
 ## 🚀 Delpoy
 
-- `viser/main.py` will open a Viser-based Hexapod demo, showing the Hexapod moving forward and performing some adjustments along the way (changing body height, speed, body yaw, ...).  
+- `viser/main.py` will open a Viser-based Hexapod demo, showing the Hexapod moving forward and performing some adjustments along the way (body height, yaw, speed, ...).  
 
    ```bash
-   python viser/main.py
+   python simulation/viser/main.py
    ```
 
 - `bullet/main.py` will open a PyBullet Hexapod simulation, showing how the robot behaves when physics is involved. 
 I used the actual stall torque the servos are rated for to simulate the motors.
 
    ```bash
-   python bullet/main.py
+   python simulation/bullet/main.py
    ```
 
 ## 🤝 Contribution
