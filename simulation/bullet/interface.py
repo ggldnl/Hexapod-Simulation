@@ -9,13 +9,14 @@ import numpy as np
 class PyBulletInterface:
     """PyBullet hexapod interface."""
 
-    def __init__(self, config, robot_id, joints):
+    def __init__(self, config, robot, physics):
         """
         Initialize the interface.
 
         Args:
             config: configuration dictionary.
-            joints: dictionary mapping leg_name to PyBullet joints (e.g. front_right: [j1, j2, j3]).
+            robot: robot ID inside the simulation.
+            physics: PyBullet physics server.
         """
 
         self.config = config
@@ -34,18 +35,55 @@ class PyBulletInterface:
         self.servo_min = {leg_name: [coxa_min, femur_min, tibia_min] for leg_name in self.leg_names}
         self.servo_max = {leg_name: [coxa_max, femur_max, tibia_max] for leg_name in self.leg_names}
 
+        # Pybullet objects
+        self.robot_id = robot
+        self.physics = physics
+
+        # We know the joints are well formatted (always coxa, femur and tibia for each leg, for leg from 1 to 6)
+        leg_names = [k for k, v in config['kinematics']['legs'].items() if isinstance(v, dict)]
+
+        # List the revolute joints
+        revolute_joints = []
+        num_joints = physics.getNumJoints(robot)
+        for joint_index in range(num_joints):
+            joint_info = physics.getJointInfo(robot, joint_index)
+            joint_type = joint_info[2]  # Joint type is the third element in joint_info tuple
+            if joint_type == physics.JOINT_REVOLUTE:
+                revolute_joints.append(joint_index)
+                # print(f"Joint {joint_index} is revolute: {joint_info[1].decode('utf-8')}")
+
+        self.joints = {
+            leg_name: [
+                revolute_joints[0 + i * 3],
+                revolute_joints[1 + i * 3],
+                revolute_joints[2 + i * 3]
+            ] for i, leg_name in enumerate(leg_names)
+        }
+
         # Legs are initially set to a random value (we don't know the initial state of the hexapod during boot)
+        # We also need to make sure that the legs are initialized above the z=0 plane
         self.current_joint_values = {
             leg: np.array([
                 np.random.uniform(coxa_min / 5, coxa_max / 5),
-                np.random.uniform(femur_min / 5, femur_max / 5),
-                np.random.uniform(tibia_min / 5, tibia_max / 5)
+                np.random.uniform(0 + femur_max / 5, femur_max),
+                45
             ]) for leg in self.leg_names
         }
 
-        # Pybullet objects
-        self.robot_id = robot_id
-        self.joints = joints
+        for leg, joint_values in self.current_joint_values.items():
+            for joint in range(3):
+                angle = joint_values[joint]
+                new_angle = self.kinematic_space_to_servo_space(leg, joint, angle)
+                new_angle_rad = np.radians(new_angle)
+                physics.resetJointState(self.robot_id, self.joints[leg][joint], new_angle_rad)
+
+        # Compute correction so bottom sits on plane (z=0)
+        # Other methods (getAABB) does not work as PyBullet adds some kind of padding
+        # or bases the computation over collisions
+        z_correction = config['kinematics']['body']['ground_to_center_z'] / 1000  # meters (PyBullet) to mm
+        pos, orn = physics.getBasePositionAndOrientation(robot)
+        physics.resetBasePositionAndOrientation(robot, [pos[0], pos[1], 0 + z_correction], orn)
+
 
     @property
     def min_femur_kinematic_space(self):
@@ -80,7 +118,7 @@ class PyBulletInterface:
         return self.servo_space_to_kinematic_space(self.leg_names[0], 2, self.servo_max[self.leg_names[0]][2])
 
     def _get_joint_position(self, leg: str, joint: int):
-        return p.getJointState(self.robot_id, self.joints[leg][joint])[0]
+        return self.physics.getJointState(self.robot_id, self.joints[leg][joint])[0]
 
     def _set_joint_position(self, leg: str, joint: int, angle: float):
 
@@ -94,7 +132,7 @@ class PyBulletInterface:
         gradually moves the joint toward the target position. The joints will require multiple simulation
         steps to reach the target position.
         """
-        # p.resetJointState(self.robot_id, self.joints[leg_name][joint_index], new_angle_rad)
+        # self.physics.resetJointState(self.robot_id, self.joints[leg_name][joint_index], new_angle_rad)
 
         """
         MG996R servos are rated for 11kgf.cm @ 6V.
@@ -105,10 +143,10 @@ class PyBulletInterface:
         """
         force = 1.08
 
-        p.setJointMotorControl2(
+        self.physics.setJointMotorControl2(
             bodyUniqueId=self.robot_id,
             jointIndex=self.joints[leg][joint],
-            controlMode=p.POSITION_CONTROL,
+            controlMode=self.physics.POSITION_CONTROL,
             targetPosition=new_angle_rad,
             force=force,  # Maximum force the motor (MG996R) can apply
             # positionGain=0.8,

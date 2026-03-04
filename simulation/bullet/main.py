@@ -33,10 +33,12 @@ if __name__ == '__main__':
                         help="Yaw velocity (deg/s)")
     parser.add_argument('--simulation-rate', '-s', type=float, default=80,
                         help="Simulation update rate in Hz. Default is 80 Hz")
-    parser.add_argument('--controller-rate', '-c', type=float, default=20,
+    parser.add_argument('--controller-rate', '-c', type=float, default=10,
                         help="Controller update rate in Hz. Default is 20 Hz")
     parser.add_argument('--width', '-w', type=int, default=1980,
                         help="Width of the simulation window. Default is 1980")
+    parser.add_argument('--lock-camera', '-l', action='store_true',
+                        help="If True, camera is locked on a predefined trajectory; if False, we can control it")
     parser.add_argument('--height', '-e', type=int, default=1080,
                         help="Height of the simulation window. Default is 1080")
     parser.add_argument('--video_path', '-p', type=str, default=None,
@@ -46,11 +48,11 @@ if __name__ == '__main__':
 
     # PyBullet setup
     physics = bc.BulletClient(connection_mode=p.GUI, options=f"--width={args.width} --height={args.height}")
-    physics.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
-    physics.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0)
-    physics.configureDebugVisualizer(p.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
-    physics.configureDebugVisualizer(p.COV_ENABLE_RGB_BUFFER_PREVIEW, 0)
-    p.configureDebugVisualizer(p.COV_ENABLE_SHADOWS, 0)  # Disable shadows
+    physics.configureDebugVisualizer(physics.COV_ENABLE_GUI,0)
+    physics.configureDebugVisualizer(physics.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0)
+    physics.configureDebugVisualizer(physics.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
+    physics.configureDebugVisualizer(physics.COV_ENABLE_RGB_BUFFER_PREVIEW, 0)
+    physics.configureDebugVisualizer(physics.COV_ENABLE_SHADOWS, 0)  # Disable shadows
 
     # Set initial camera view
     default_camera_distance = 0.5
@@ -75,53 +77,27 @@ if __name__ == '__main__':
 
     urdf_file = get_hardware_path("hexapod.urdf")
     pos = [0, 0, 0.2]
-    orn = p.getQuaternionFromEuler([0, 0, 0])
-    robotID = physics.loadURDF(str(urdf_file), pos, orn, flags=p.URDF_USE_INERTIA_FROM_FILE)
-
-    # Compute correction so bottom sits on plane (z=0)
-    aabb_min, aabb_max = p.getAABB(robotID)
-    bottom_z = aabb_min[2]
-    z_correction = -bottom_z + 0.1
-    pos, orn = p.getBasePositionAndOrientation(robotID)
-    p.resetBasePositionAndOrientation(robotID, [pos[0], pos[1], pos[2] + z_correction], orn)
+    orn = physics.getQuaternionFromEuler([0, 0, 0])
+    robotID = physics.loadURDF(str(urdf_file), pos, orn, flags=physics.URDF_USE_INERTIA_FROM_FILE)
 
     # Adjust friction
-    # p.changeDynamics(robotID, -1, lateralFriction=5.0, spinningFriction=0.1, rollingFriction=0.1)
-    # p.changeDynamics(planeID, -1, lateralFriction=5.0)
-
-    # List the revolute joints
-    revolute_joints = []
-    num_joints = physics.getNumJoints(robotID)
-    for joint_index in range(num_joints):
-        joint_info = physics.getJointInfo(robotID, joint_index)
-        joint_type = joint_info[2]  # Joint type is the third element in joint_info tuple
-        if joint_type == physics.JOINT_REVOLUTE:
-            revolute_joints.append(joint_index)
-            print(f"Joint {joint_index} is revolute: {joint_info[1].decode('utf-8')}")
+    # physics.changeDynamics(robotID, -1, lateralFriction=5.0, spinningFriction=0.1, rollingFriction=0.1)
+    # physics.changeDynamics(planeID, -1, lateralFriction=5.0)
 
     # Load configuration
     config_path = get_controller_path("controller", "config", "config.yml")
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
 
-    # We know the joints are well formatted (always coxa, femur and tibia for each leg, for leg from 1 to 6)
-    leg_names = [k for k, v in config['kinematics']['legs'].items() if isinstance(v, dict)]
-    joint_mapping = {
-        leg_name: [
-            revolute_joints[0 + i * 3],
-            revolute_joints[1 + i * 3],
-            revolute_joints[2 + i * 3]
-        ] for i, leg_name in enumerate(leg_names)
-    }
-
     # Create the controller
-    interface = PyBulletInterface(config, robotID, joint_mapping)  # PyBullet simulation interface
+    interface = PyBulletInterface(config, robotID, physics)  # PyBullet simulation interface
     controller = HexapodController(interface, config)
+    controller.set_gait(args.gait)
 
     # Video
     if args.video_path:
         Path(args.video_path).parent.mkdir(exist_ok=True, parents=True)
-        physics.startStateLogging(p.STATE_LOGGING_VIDEO_MP4, args.video_path)
+        physics.startStateLogging(physics.STATE_LOGGING_VIDEO_MP4, args.video_path)
 
     # Simulation loop
     try:
@@ -140,8 +116,11 @@ if __name__ == '__main__':
         t4 = 12.0   # set angular velocity
         t5 = 35.0   # stop
         t6 = 37.0   # shutdown
+        t7 = 40.0   # exit loop
 
-        while p.isConnected():
+        while physics.isConnected():
+
+            frame_start = time.perf_counter()
 
             # Accumulate time
             controller_time_accumulator += simulation_dt
@@ -186,17 +165,70 @@ if __name__ == '__main__':
                 t6 = None
                 controller.shutdown()
 
+            if t7 and t >= t7:
+                t7 = None
+                break
+
+            if args.lock_camera:
+
+                # Get robot base pose
+                base_pos, base_orn = physics.getBasePositionAndOrientation(robotID)
+                base_euler = physics.getEulerFromQuaternion(base_orn)
+
+                # Keep same relative camera parameters
+                camera_distance = default_camera_distance
+                camera_pitch = default_camera_pitch
+                camera_roll = default_camera_roll
+
+                # Option 1: fixed yaw (world-aligned camera)
+                """
+                camera_yaw = default_camera_yaw
+                """
+
+                # Option 2: yaw follows robot heading
+                """
+                camera_yaw = -base_euler[2] * 180.0 / 3.141592653589793 + 180
+                """
+
+                # Option 3: yaw follows a predefined sine-based animation
+                """
+                yaw_base = 180.0  # central yaw angle (deg)
+                yaw_amplitude = 20.0  # max deviation (deg)
+                yaw_frequency = 0.2  # oscillations per second
+                camera_yaw = yaw_base + yaw_amplitude * math.sin(2 * math.pi * yaw_frequency * t)
+                """
+
+                # Option 4: yaw follows a predefined orbit trajectory
+                yaw_base = 180.0
+                orbit_speed = 2.5  # deg/sec
+                camera_yaw = yaw_base + orbit_speed * t
+
+                # Update camera position
+                physics.resetDebugVisualizerCamera(
+                    cameraDistance=camera_distance,
+                    cameraYaw=camera_yaw,
+                    cameraPitch=camera_pitch,
+                    cameraTargetPosition=base_pos
+                )
+
+
             # Step the simulation at its own rate
             physics.stepSimulation()
-
-            time.sleep(simulation_dt)
             t += simulation_dt
+
+            # Sleep only what's left of the frame budget
+            elapsed = time.perf_counter() - frame_start
+            remaining = simulation_dt - elapsed
+            if remaining > 0:
+                time.sleep(remaining)
 
     finally:
 
-        # Disconnect from the simulations when done
-        physics.disconnect()
+        # Stop the recording
+        if args.video_path:
+            time.sleep(0.1)
+            physics.stopStateLogging(physics.STATE_LOGGING_VIDEO_MP4)
 
-    # Stop the recording
-    if args.video_path:
-        physics.stopStateLogging(p.STATE_LOGGING_VIDEO_MP4)
+        # Disconnect from the simulations when done
+        time.sleep(0.1)
+        physics.disconnect()
