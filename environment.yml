@@ -3,9 +3,9 @@ channels:
   - conda-forge
 dependencies:
   - pip
-  - yaml
   - numpy
   - viser
+  - pyyaml
   - pybullet
   - pyserial
   - pip:
