@@ -33,7 +33,7 @@ if __name__ == '__main__':
                         help="Yaw velocity (deg/s)")
     parser.add_argument('--simulation-rate', '-s', type=float, default=80,
                         help="Simulation update rate in Hz. Default is 80 Hz")
-    parser.add_argument('--controller-rate', '-c', type=float, default=10,
+    parser.add_argument('--controller-rate', '-c', type=float, default=20,
                         help="Controller update rate in Hz. Default is 20 Hz")
     parser.add_argument('--width', '-w', type=int, default=1980,
                         help="Width of the simulation window. Default is 1980")
@@ -105,7 +105,6 @@ if __name__ == '__main__':
         # Time tracking
         simulation_dt = 1. / args.simulation_rate
         controller_dt = 1. / args.controller_rate
-        controller_time_accumulator = 0.0
         t = 0.0
 
         # Examples
@@ -118,17 +117,16 @@ if __name__ == '__main__':
         t6 = 37.0   # shutdown
         t7 = 40.0   # exit loop
 
+        last_frame = time.perf_counter()
         while physics.isConnected():
 
-            frame_start = time.perf_counter()
+            now = time.perf_counter()
+            actual_dt = now - last_frame
+            last_frame = now
+            t += actual_dt
 
-            # Accumulate time
-            controller_time_accumulator += simulation_dt
-
-            # Only update controller when enough time has passed
-            if controller_time_accumulator >= controller_dt:
-                outcome = controller.update(controller_dt)
-                controller_time_accumulator -= controller_dt  # Keep remainder for accuracy
+            # Step the controller
+            outcome = controller.update(actual_dt)
 
             # Example: at t0, look in one direction (change body orientation)
             if t0 and t >= t0:
@@ -213,12 +211,16 @@ if __name__ == '__main__':
 
 
             # Step the simulation at its own rate
-            physics.stepSimulation()
-            t += simulation_dt
+            sim_steps = max(1, round(actual_dt / simulation_dt))
+            for _ in range(sim_steps):
+                physics.stepSimulation()
 
-            # Sleep only what's left of the frame budget
-            elapsed = time.perf_counter() - frame_start
-            remaining = simulation_dt - elapsed
+            # Warn if over budget
+            elapsed = time.perf_counter() - now
+            if elapsed > controller_dt:
+                print(f"Frame over budget: {elapsed * 1000:.1f}ms > {controller_dt * 1000:.1f}ms")
+
+            remaining = controller_dt - elapsed
             if remaining > 0:
                 time.sleep(remaining)
 

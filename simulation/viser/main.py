@@ -32,8 +32,8 @@ if __name__ == '__main__':
                         help="Yaw velocity (deg/s)")
     parser.add_argument('--simulation-rate', '-s', type=float, default=80,
                         help="Simulation update rate in Hz. Default is 80 Hz")
-    parser.add_argument('--controller-rate', '-c', type=float, default=40,
-                        help="Controller update rate in Hz. Default is 50 Hz")
+    parser.add_argument('--controller-rate', '-c', type=float, default=20,
+                        help="Controller update rate in Hz. Default is 20 Hz")
     parser.add_argument('--port', '-p', type=int, default=8080,
                         help='Viser server port')
 
@@ -78,7 +78,6 @@ if __name__ == '__main__':
         # Time tracking
         simulation_dt = 1. / args.simulation_rate
         controller_dt = 1. / args.controller_rate
-        controller_time_accumulator = 0.0
         t = 0.0
 
         # Examples
@@ -89,15 +88,16 @@ if __name__ == '__main__':
         t4 = 25.0
         t5 = 30.0
 
+        last_frame = time.perf_counter()
         while True:
 
-            # Accumulate time
-            controller_time_accumulator += simulation_dt
+            now = time.perf_counter()
+            actual_dt = now - last_frame
+            last_frame = now
+            t += actual_dt
 
-            # Only update controller when enough time has passed
-            if controller_time_accumulator >= controller_dt:
-                outcome = controller.update(controller_dt)
-                controller_time_accumulator -= controller_dt  # Keep remainder for accuracy
+            # Step the controller
+            outcome = controller.update(actual_dt)
 
             # Example: at t0, we start the gait
             if t0 and t >= t0:
@@ -128,8 +128,14 @@ if __name__ == '__main__':
             if t5 and t >= t5:
                 break
 
-            time.sleep(simulation_dt)
-            t += simulation_dt
+            # Warn if over budget
+            elapsed = time.perf_counter() - now
+            if elapsed > controller_dt:
+                print(f"Frame over budget: {elapsed * 1000:.1f}ms > {controller_dt * 1000:.1f}ms")
+
+            remaining = controller_dt - elapsed
+            if remaining > 0:
+                time.sleep(remaining)
 
     except KeyboardInterrupt:
 
