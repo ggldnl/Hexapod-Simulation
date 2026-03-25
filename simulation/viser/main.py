@@ -34,6 +34,8 @@ if __name__ == '__main__':
                         help="Simulation update rate in Hz. Default is 80 Hz")
     parser.add_argument('--controller-rate', '-c', type=float, default=20,
                         help="Controller update rate in Hz. Default is 20 Hz")
+    parser.add_argument('--verbose', '-t', action='store_true',
+                        help="If True, the robot will log status messages; if False, it will stay silent")
     parser.add_argument('--port', '-p', type=int, default=8080,
                         help='Viser server port')
 
@@ -70,7 +72,7 @@ if __name__ == '__main__':
 
     # Create the controller
     interface = ViserInterface(config, urdf)  # Viser demo interface
-    controller = HexapodController(interface, config)
+    controller = HexapodController(interface, config, verbose=args.verbose)
 
     # Simulation loop
     try:

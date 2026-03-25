@@ -37,10 +37,12 @@ if __name__ == '__main__':
                         help="Controller update rate in Hz. Default is 20 Hz")
     parser.add_argument('--width', '-w', type=int, default=1980,
                         help="Width of the simulation window. Default is 1980")
-    parser.add_argument('--lock-camera', '-l', action='store_true',
-                        help="If True, camera is locked on a predefined trajectory; if False, we can control it")
     parser.add_argument('--height', '-e', type=int, default=1080,
                         help="Height of the simulation window. Default is 1080")
+    parser.add_argument('--lock-camera', '-l', action='store_true',
+                        help="If True, camera is locked on a predefined trajectory; if False, we can control it")
+    parser.add_argument('--verbose', '-t', action='store_true',
+                        help="If True, the robot will log status messages; if False, it will stay silent")
     parser.add_argument('--video_path', '-p', type=str, default=None,
                         help="If provided, the script will save an mp4 of the simulation on the path")
 
@@ -91,7 +93,7 @@ if __name__ == '__main__':
 
     # Create the controller
     interface = PyBulletInterface(config, robotID, physics)  # PyBullet simulation interface
-    controller = HexapodController(interface, config)
+    controller = HexapodController(interface, config, verbose=args.verbose)
     controller.set_gait(args.gait)
 
     # Video
