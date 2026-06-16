@@ -32,6 +32,8 @@ Before you start, ensure `mamba` is properly installed on the machine you are us
     # Update the submodules if something changes in the future
     git submodule update --recursive --remote
     ```
+   
+    I chose to use Hexapod-Controller as a submodule so that I could modify the code and immediately test the results in simulation.
 
 2. Create a mamba environment:
 
@@ -61,6 +63,15 @@ I used the actual stall torque the servos are rated for to simulate the motors.
    ```bash
    python simulation/bullet/main.py
    ```
+
+- `bullet/teleop.py` lets you drive the robot live in PyBullet with a game controller (PS3/Xbox-style) or the keyboard. It runs the exact same controller, kinematics and gait code as the real robot, but without the UART link — so there are no serial round-trips or servo lag.
+
+   ```bash
+   python simulation/bullet/teleop.py            # joystick if present, else keyboard
+   python simulation/bullet/teleop.py --calibrate # print live axis/button indices for your pad
+   ```
+
+   Left stick translates, right stick turns (and tilts the body); hold R1 as a deadman. Keyboard fallback: `WASD` to move, `Q`/`E` to turn, `R`/`F` for height, `1`/`2`/`3` to switch gait. See the module docstring for the full mapping.
 
 ## 🤝 Contribution
 
