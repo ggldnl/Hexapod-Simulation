@@ -1,7 +1,7 @@
 # Hexapod Simulation
 
-This repository includes the code to simulate the Hexapod. 
-It includes code to visualize and interact with the robot in Viser and code to simulate it in a PyBullet environment. 
+This repository includes the code to simulate the Hexapod.
+It includes code to visualize and interact with the robot in Viser and code to simulate it in a PyBullet environment.
 
 <table>
   <tr>
@@ -16,62 +16,88 @@ It includes code to visualize and interact with the robot in Viser and code to s
 
 For a complete overview of the project, refer to the [main Hexapod repository](https://github.com/ggldnl/Hexapod).
 
+## 🧠 How it works
+
+The simulation runs the real firmware core in-process. The [Hexapod-Firmware](https://github.com/ggldnl/Hexapod-Firmware.git) C++ code is compiled into a shared library, and a small ctypes bridge lets Python call it. The same Pi-side [Hexapod-Controller](https://github.com/ggldnl/Hexapod-Controller.git) that talks to the real board drives this library instead of a serial port, and the [Hexapod-Hardware](https://github.com/ggldnl/Hexapod-Hardware.git) URDF and meshes are rendered on top.
+
+The three repositories are pulled in as submodules at the repo root:
+
+```
+Hexapod-Controller   # Pi-side hexapod client package, installed editable
+Hexapod-Firmware     # C++ core, compiled into bridge/libhexapod_fw.so
+Hexapod-Hardware     # URDF + STL meshes the renderers use
+bridge/              # sim_bridge.cpp + build.sh, the ctypes glue
+simulation/          # the sim package, with the viser and bullet front-ends
+```
+
 ## 🛠️ Setup
 
-Before you start, ensure `mamba` is properly installed on the machine you are using for the simulation.
+You need a C++ compiler (g++) to build the firmware core and `mamba` (or `conda`) for the Python environment.
 
-1. Clone the repository:
-
-   ```bash
-    git clone --recursive https://github.com/ggldnl/Hexapod-Simulation.git
-    ```
-   
-   The [Hexapod-Controller](https://github.com/ggldnl/Hexapod-Controller.git) and [Hexapod-Hardware]((https://github.com/ggldnl/Hexapod-Hardware.git)) repositories are configured as submodules and are automatically downloaded. If for some reason you need to update the submodules in the future:
-
-    ```bash
-    # Update the submodules if something changes in the future
-    git submodule update --recursive --remote
-    ```
-   
-    I chose to use Hexapod-Controller as a submodule so that I could modify the code and immediately test the results in simulation.
-
-2. Create a mamba environment:
-
-    ```bash
-    cd Hexapod-Simulation
-    mamba env create -f environment.yml
-    mamba activate hexapod-sim
-    ```
-   
-   The Hexapod-Controller code will be automatically installed as a package. After this, from within the `hexapod-sim` mamba environment, you will be able to do something like this:
-
-   ```python
-   from controller import HexapodController
-   ```
-   
-## 🚀 Delpoy
-
-- `viser/main.py` will open a Viser-based Hexapod demo, showing the Hexapod moving forward and performing some adjustments along the way (body height, yaw, speed, ...).  
+1. Clone the repository with its submodules:
 
    ```bash
-   python simulation/viser/main.py
+   git clone --recursive https://github.com/ggldnl/Hexapod-Simulation.git
+   cd Hexapod-Simulation
    ```
 
-- `bullet/main.py` will open a PyBullet Hexapod simulation, showing how the robot behaves when physics is involved. 
-I used the actual stall torque the servos are rated for to simulate the motors.
+   If you already cloned without `--recursive`, pull the submodules in:
 
    ```bash
-   python simulation/bullet/main.py
+   git submodule update --init --recursive
    ```
 
-- `bullet/teleop.py` lets you drive the robot live in PyBullet with a game controller (PS3/Xbox-style) or the keyboard. It runs the exact same controller, kinematics and gait code as the real robot, but without the UART link — so there are no serial round-trips or servo lag.
+   To bump the submodules to their latest upstream commit later:
 
    ```bash
-   python simulation/bullet/teleop.py            # joystick if present, else keyboard
-   python simulation/bullet/teleop.py --calibrate # print live axis/button indices for your pad
+   git submodule update --recursive --remote
    ```
 
-   Left stick translates, right stick turns (and tilts the body); hold R1 as a deadman. Keyboard fallback: `WASD` to move, `Q`/`E` to turn, `R`/`F` for height, `1`/`2`/`3` to switch gait. See the module docstring for the full mapping.
+   Hexapod-Firmware and Hexapod-Controller being submodules means we can edit them locally, recompile and immediately test the change in simulation.
+
+2. Build the firmware core into a shared library:
+
+   ```bash
+   ./bridge/build.sh
+   ```
+
+   This compiles the Hexapod-Firmware C++ core into `bridge/libhexapod_fw.so`. Rerun it whenever the firmware submodule changes.
+
+3. Create the environment:
+
+   ```bash
+   mamba env create -f environment.yml
+   mamba activate hexapod-sim
+   ```
+
+   This installs the dependencies and the Hexapod-Controller submodule in editable mode, so `import hexapod` works inside the environment.
+
+## 🚀 Run
+
+The front-ends run as modules from the repository root, with the `hexapod-sim` environment active.
+
+- Viser browser demo, showing the Hexapod moving forward and adjusting body height, yaw and speed along the way:
+
+  ```bash
+  python -m simulation.viser.main
+  ```
+
+  Open the printed URL (default http://localhost:8080). Viser has no physics, so the body stays put and the legs cycle in place while you drive the gait from the control panel.
+
+- PyBullet physics demo, showing how the robot behaves once physics is involved. It uses the stall torque the servos are rated for to model the motors:
+
+  ```bash
+  python -m simulation.bullet.main
+  ```
+
+- PyBullet teleop, driving the robot live with a game controller (PS3/Xbox-style) or the keyboard:
+
+  ```bash
+  python -m simulation.bullet.teleop             # joystick if present, else keyboard
+  python -m simulation.bullet.teleop --calibrate # print live axis/button indices for your pad
+  ```
+
+  Left stick translates, right stick turns and tilts the body, hold R1 as a deadman. Keyboard fallback: `WASD` to move, `Q`/`E` to turn, `R`/`F` for height, `1`/`2`/`3` to switch gait. See the module docstring for the full mapping.
 
 ## 🤝 Contribution
 

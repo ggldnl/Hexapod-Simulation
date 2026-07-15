@@ -1,144 +1,178 @@
 """
-Quick Viser-based Hexapod demo.
+Viser visualization of the Hexapod-Reimagined stack, with live gait controls.
+
+Runs the REAL C++ firmware core in-process (via the ctypes bridge) and drives it
+with the ordinary Pi-side HexapodClient. Viser renders the URDF in the browser and
+gives you a control panel to drive the gait directly:
+
+    browser GUI -> HexapodClient -> SimTransport -> Firmware (C++) -> servo deg -> URDF
+
+Viser is a pure visualizer (no physics), so the body stays put and the legs cycle
+in place. It is meant to "show the robot walking" and to poke at the gait live.
+
+Controls (in the browser panel)
+    Lifecycle   Enable / Shutdown / Stop, plus the reported state
+    Gait        tripod / wave / ripple
+    Velocity    vx, vy (mm/s) and yaw (deg/s)
+    Body pose   height, roll, pitch, yaw offsets from standing
+
+Build the bridge first:  ./bridge/build.sh
+Run:                     python3 -m simulation.viser.main   [--urdf PATH] [--port 8080]
+Then open the printed URL (default http://localhost:8080).
 """
+from __future__ import annotations
 
-import yaml
-import time
 import argparse
+import time
+from collections import deque
+from pathlib import Path
 
-# Viser
 import viser
 import yourdfpy
 from viser.extras import ViserUrdf
 
-from simulation.bridge import get_controller_path, get_hardware_path
-from interface import ViserInterface
-from controller import HexapodController
+from simulation import Firmware, SimTransport, paths
+from simulation.viser.interface import ViserInterface
+from simulation.viser import utils
+from hexapod import GaitId, HexapodClient
 
 
-if __name__ == '__main__':
+GAIT_ID = {"tripod": GaitId.TRIPOD, "wave": GaitId.WAVE, "ripple": GaitId.RIPPLE}
 
-    parser = argparse.ArgumentParser(description='Visualize Hexapod demo on Viser')
-    parser.add_argument('--gait', '-g', type=str, default='tripod',
-                        choices=['tripod', 'wave', 'ripple'],
-                        help='Gait pattern to visualize')
-    parser.add_argument('--vx', '-x', type=float, default=50.0,
-                        help='Forward velocity (mm/s)')
-    parser.add_argument('--vy', '-y', type=float, default=0.0,
-                        help='Strafe velocity (mm/s)')
-    parser.add_argument('--vz', '-z', type=float, default=0.0,
-                        help='Upward velocity (mm/s)')
-    parser.add_argument('--yaw', '-v', type=float, default=0.0,
-                        help="Yaw velocity (deg/s)")
-    parser.add_argument('--simulation-rate', '-s', type=float, default=80,
-                        help="Simulation update rate in Hz. Default is 80 Hz")
-    parser.add_argument('--controller-rate', '-c', type=float, default=20,
-                        help="Controller update rate in Hz. Default is 20 Hz")
-    parser.add_argument('--verbose', '-t', action='store_true',
-                        help="If True, the robot will log status messages; if False, it will stay silent")
-    parser.add_argument('--port', '-p', type=int, default=8080,
-                        help='Viser server port')
 
-    args = parser.parse_args()
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Hexapod-Reimagined Viser viz + controls")
+    ap.add_argument("--urdf", default=str(paths.default_urdf()),
+                    help="path to hexapod.urdf (from the Hexapod-Hardware submodule)")
+    ap.add_argument("--gait", "-g", default="tripod", choices=list(GAIT_ID))
+    ap.add_argument("--port", "-p", type=int, default=8080, help="Viser server port")
+    ap.add_argument("--control-rate", "-c", type=float, default=50.0,
+                    help="Hz (matches cfg::CONTROL_RATE_HZ)")
+    args = ap.parse_args()
 
-    # Viser setup
+    urdf_path = Path(args.urdf)
+    if not urdf_path.exists():
+        raise SystemExit(f"URDF not found: {urdf_path}\n"
+                         "Add the Hexapod-Hardware submodule or pass --urdf.")
+
+    # --- firmware core + client (same client as on the real robot) ---
+    fw = Firmware()
+    bot = HexapodClient(SimTransport(fw))
+
+    # --- viser scene ---
     server = viser.ViserServer(port=args.port)
+    robot_model = yourdfpy.URDF.load(str(urdf_path), mesh_dir=str(urdf_path.parent))
+    urdf = ViserUrdf(server, robot_model, root_node_name="/robot")
+    iface = ViserInterface(urdf)
 
-    # Load configuration
-    config_path = get_controller_path("controller", "config", "config.yml")
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
+    # --- control panel ---
+    # Discrete actions (lifecycle / gait) are queued from GUI callbacks and drained
+    # by the loop, so ONLY the loop ever touches the client (no cross-thread races).
+    actions: "deque[tuple]" = deque()
 
-    # Robot frame
-    root_frame = "/robot"
-    urdf_path = get_hardware_path("hexapod.urdf")
-    mesh_path = get_hardware_path("CAD")
-    server.scene.add_frame(root_frame, show_axes=False)
-    robot = yourdfpy.URDF.load(
-        urdf_path,
-        mesh_dir=mesh_path,
-    )
-    urdf = ViserUrdf(
-        server,
-        robot,
-        root_node_name=root_frame,
-    )
+    with server.gui.add_folder("Lifecycle"):
+        enable_btn = server.gui.add_button("Enable (stand up)")
+        shutdown_btn = server.gui.add_button("Shutdown (sit down)")
+        stop_btn = server.gui.add_button("Stop")
+        state_txt = server.gui.add_text("State", initial_value="OFF", disabled=True)
 
-    # Determine actuated joints (order matters)
-    joint_names = urdf.get_actuated_joint_names()
-    print("Actuated joints from URDF:")
-    for i, name in enumerate(joint_names):
-        print(f"  {i}: {name}")
+    with server.gui.add_folder("Gait"):
+        gait_dd = server.gui.add_dropdown("Pattern", ("tripod", "wave", "ripple"),
+                                          initial_value=args.gait)
 
-    # Create the controller
-    interface = ViserInterface(config, urdf)  # Viser demo interface
-    controller = HexapodController(interface, config, verbose=args.verbose)
+    with server.gui.add_folder("Velocity"):
+        vx_sl = server.gui.add_slider("vx (mm/s)", -200.0, 200.0, 5.0, 0.0)
+        vy_sl = server.gui.add_slider("vy (mm/s)", -200.0, 200.0, 5.0, 0.0)
+        yaw_sl = server.gui.add_slider("yaw (deg/s)", -60.0, 60.0, 1.0, 0.0)
+        zero_btn = server.gui.add_button("Zero velocity")
 
-    # Simulation loop
+    with server.gui.add_folder("Body pose"):
+        height_sl = server.gui.add_slider("height (mm)", -40.0, 40.0, 1.0, 0.0)
+        roll_sl = server.gui.add_slider("roll (deg)", -15.0, 15.0, 0.5, 0.0)
+        pitch_sl = server.gui.add_slider("pitch (deg)", -15.0, 15.0, 0.5, 0.0)
+        poseyaw_sl = server.gui.add_slider("yaw (deg)", -15.0, 15.0, 0.5, 0.0)
+
+    with server.gui.add_folder("Telemetry"):
+        odom_txt = server.gui.add_text("Odometry", initial_value="-", disabled=True)
+        power_txt = server.gui.add_text("Power", initial_value="-", disabled=True)
+
+    enable_btn.on_click(lambda _: actions.append(("enable",)))
+    shutdown_btn.on_click(lambda _: actions.append(("shutdown",)))
+    stop_btn.on_click(lambda _: actions.append(("stop",)))
+    zero_btn.on_click(lambda _: actions.append(("zero",)))
+    gait_dd.on_update(lambda _: actions.append(("gait", gait_dd.value)))
+
+    # --- loop ---
+    control_dt = 1.0 / args.control_rate
+    telemetry_accum = 0.0
+    last = time.perf_counter()
+    print(f"Viser running at http://localhost:{args.port}  (Ctrl+C to quit)")
+
     try:
-
-        # Time tracking
-        simulation_dt = 1. / args.simulation_rate
-        controller_dt = 1. / args.controller_rate
-        t = 0.0
-
-        # Examples
-        t0 = 5.0
-        t1 = 10.0
-        t2 = 15.0
-        t3 = 20.0
-        t4 = 25.0
-        t5 = 30.0
-
-        last_frame = time.perf_counter()
         while True:
+            # Drain queued GUI actions (client touched only here).
+            while actions:
+                act = actions.popleft()
+                if act[0] == "enable":
+                    bot.enable()
+                    bot.set_gait(GAIT_ID[gait_dd.value])
+                elif act[0] == "shutdown":
+                    bot.shutdown()
+                elif act[0] == "stop":
+                    bot.stop()
+                    vx_sl.value = vy_sl.value = yaw_sl.value = 0.0
+                elif act[0] == "zero":
+                    vx_sl.value = vy_sl.value = yaw_sl.value = 0.0
+                elif act[0] == "gait":
+                    bot.set_gait(GAIT_ID[act[1]])
 
-            now = time.perf_counter()
-            actual_dt = now - last_frame
-            last_frame = now
-            t += actual_dt
+            # Stream setpoints every tick (also pets the command watchdog).
+            bot.set_velocity(vx_sl.value, vy_sl.value, yaw_sl.value)
+            bot.set_body_pose(z=height_sl.value, roll=roll_sl.value,
+                              pitch=pitch_sl.value, yaw=poseyaw_sl.value)
 
-            # Step the controller
-            outcome = controller.update(actual_dt)
+            # Advance the firmware and pose the model.
+            fw.update(control_dt)
+            iface.apply(fw.servos(), powered=fw.powered())
 
-            # Example: at t0, we start the gait
-            if t0 and t >= t0:
-                t0 = None  # invalidate so that we won't change it again
-                controller.set_linear_velocity(args.vx, args.vy, args.vz)
-                # controller.set_angular_velocity(args.yaw)
+            # A little ground arrow showing the commanded ground velocity.
+            _draw_velocity_arrow(server, vx_sl.value, vy_sl.value)
 
-            # Example: at t1, we change body position (lower body to 50 mm)
-            if t1 and t >= t1:
-                t1 = None
-                controller.set_body_position(0, 0, 50)
+            # Telemetry readout (~5 Hz).
+            telemetry_accum += control_dt
+            if telemetry_accum >= 0.2:
+                telemetry_accum = 0.0
+                try:
+                    tel = bot.get_telemetry()
+                    state_txt.value = tel.state.name
+                    odom_txt.value = (f"x={tel.odom_x:+.0f} y={tel.odom_y:+.0f} mm  "
+                                      f"yaw={tel.odom_yaw:+.0f} deg")
+                    power_txt.value = (f"{'ON' if fw.powered() else 'off'}  "
+                                       f"{tel.voltage:.1f} V  {tel.current:.2f} A")
+                except Exception:
+                    pass
 
-            # Example: at t2, we change body orientation
-            if t2 and t >= t2:
-                t2 = None
-                controller.set_body_orientation(5, 5, 5)
-
-            # Example: at t3, we speed up
-            if t3 and t >= t3:
-                t3 = None
-                controller.set_linear_velocity(args.vx * 10, args.vy * 10, args.vz * 10)
-
-            # Example: at t4, we stop
-            if t4 and t >= t4:
-                t4 = None
-                controller.set_linear_velocity(0, 0, 0)
-
-            if t5 and t >= t5:
-                break
-
-            # Warn if over budget
-            elapsed = time.perf_counter() - now
-            if elapsed > controller_dt:
-                print(f"Frame over budget: {elapsed * 1000:.1f}ms > {controller_dt * 1000:.1f}ms")
-
-            remaining = controller_dt - elapsed
-            if remaining > 0:
-                time.sleep(remaining)
-
+            last += control_dt
+            time.sleep(max(0.0, last - time.perf_counter()))
     except KeyboardInterrupt:
+        print("\nViser stopped")
 
-        print("Visualization stopped")
+
+def _draw_velocity_arrow(server, vx: float, vy: float) -> None:
+    """Draw (replace) a ground-plane line for the commanded velocity, in meters.
+    Re-adding with the same name replaces the node; wrapped so any viser version
+    quirk can't take down the loop."""
+    scale = 1.0 / 1000.0  # mm/s -> a length in meters
+    if abs(vx) < 1e-3 and abs(vy) < 1e-3:
+        start, end = (0, 0, 0.02), (0, 0, 0.03)  # tiny upright tick when stopped
+    else:
+        start, end = (0, 0, 0.02), (vx * scale, vy * scale, 0.02)
+    try:
+        utils.add_line(server, name="/cmd_vel", start=start, end=end,
+                       line_width=4.0, colors=(0, 200, 0))
+    except Exception:
+        pass
+
+
+if __name__ == "__main__":
+    main()

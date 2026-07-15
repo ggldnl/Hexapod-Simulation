@@ -1,6 +1,9 @@
 [submodule "Hexapod-Hardware"]
 	path = Hexapod-Hardware
 	url = https://github.com/ggldnl/Hexapod-Hardware.git
+[submodule "Hexapod-Firmware"]
+	path = Hexapod-Firmware
+	url = https://github.com/ggldnl/Hexapod-Firmware.git
 [submodule "Hexapod-Controller"]
 	path = Hexapod-Controller
 	url = https://github.com/ggldnl/Hexapod-Controller.git
