@@ -1,11 +1,9 @@
 """
-Interactive PyBullet teleop for the Hexapod-Reimagined stack.
+Interactive PyBullet teleop for the Hexapod stack.
 
 Drives the SAME C++ firmware core that runs on the board (via the ctypes bridge),
 through the ordinary Pi-side HexapodClient, with PyBullet as the "hardware". No
-serial round-trips, no servo lag.
-
-    input -> HexapodClient -> SimTransport -> Firmware (C++) -> servo deg -> PyBullet
+serial round-trips.
 
 Input
 -----
@@ -36,7 +34,7 @@ to PyBullet's own keyboard events, so it stays usable without a pad.
 
 Note on controller indices
 --------------------------
-SDL/pygame axis & button indices are NOT universal; they depend on the pad and
+SDL/pygame axis & button indices are not universal; they depend on the pad and
 the OS. Run with `--calibrate` to print live axis/button values and read off the
 right indices for your controller, then adjust the constants below.
 """
@@ -239,7 +237,7 @@ def run_calibrate():
 def main():
     parser = argparse.ArgumentParser(description="Interactive PyBullet Hexapod teleop")
     parser.add_argument("--urdf", default=str(paths.default_urdf()),
-                        help="path to hexapod.urdf (from the Hexapod-Hardware submodule)")
+                        help="path to hexapod.urdf")
     parser.add_argument("--gait", "-g", type=str, default="tripod",
                         choices=GAITS, help="initial gait pattern")
     parser.add_argument("--input", "-i", type=str, default="auto",

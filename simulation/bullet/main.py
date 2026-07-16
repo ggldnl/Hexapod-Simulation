@@ -6,13 +6,11 @@ with the ordinary Pi-side HexapodClient, the same client you would use over a
 serial link to the board. PyBullet is only the "hardware": it renders the URDF
 and applies the servo commands the firmware produces.
 
-    HexapodClient -> SimTransport -> Firmware (C++ core) -> servo deg -> PyBullet
-
 This is a scripted demo. For live control use `simulation.bullet.teleop` or 
 `simulation.viser.main`.
 
-./bridge/build.sh  # build the bridge first  
-python3 -m simulation.bullet.main [--urdf PATH] [--gait tripod]
+    ./bridge/build.sh                   # build the bridge first  
+    python3 -m simulation.bullet.main   # [--urdf PATH] [--gait tripod]
 """
 from __future__ import annotations
 
@@ -33,9 +31,10 @@ GAITS = {"tripod": GaitId.TRIPOD, "wave": GaitId.WAVE, "ripple": GaitId.RIPPLE}
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Hexapod-Reimagined PyBullet demo")
+    
+    ap = argparse.ArgumentParser(description="Hexapod PyBullet demo")
     ap.add_argument("--urdf", default=str(paths.default_urdf()),
-                    help="path to hexapod.urdf (from the Hexapod-Hardware submodule)")
+                    help="path to hexapod.urdf")
     ap.add_argument("--gait", "-g", default="tripod", choices=list(GAITS))
     ap.add_argument("--vx", "-x", type=float, default=120.0, help="forward mm/s")
     ap.add_argument("--vy", "-y", type=float, default=0.0, help="strafe mm/s")
@@ -56,6 +55,7 @@ def main() -> None:
     # Firmware core + client (same client as on the real robot)
     fw = Firmware()
     bot = HexapodClient(SimTransport(fw))
+    bot.set_gait(GAITS[args.gait])
 
     # PyBullet world
     phys = bc.BulletClient(connection_mode=p.GUI,
@@ -77,15 +77,17 @@ def main() -> None:
         phys.startStateLogging(phys.STATE_LOGGING_VIDEO_MP4, args.video)
 
     # scripted timeline (seconds -> action)
-    def do_enable():   bot.enable(); bot.set_gait(GAITS[args.gait])
-    def do_walk():     bot.set_velocity(args.vx, args.vy, 0.0)
-    def do_turn():     bot.set_velocity(args.vx, args.vy, args.yaw)
-    def do_lean():     bot.set_body_pose(roll=5.0, pitch=-5.0)
-    def do_stop():     bot.set_velocity(0.0, 0.0, 0.0); bot.set_body_pose()
-    def do_shutdown(): bot.shutdown()
-
-    timeline = [(0.5, do_enable), (5.0, do_walk), (12.0, do_turn),
-                (20.0, do_lean), (26.0, do_stop), (29.0, do_shutdown), (34.0, None)]
+    timeline = [
+        (0.5,  lambda: bot.enable()),
+        (5.0,  lambda: bot.set_body_pose(roll=5.0, pitch=-5.0, yaw=5.0)),
+        (6.0,  lambda: bot.set_body_pose(roll=-5.0, pitch=-5.0, yaw=-5.0)),
+        (7.0,  lambda: bot.set_body_pose(roll=0.0, pitch=0.0, yaw=0.0)),
+        (8.0,  lambda: bot.set_velocity(args.vx, args.vy, 0.0)),
+        (12.0, lambda: bot.set_velocity(args.vx, args.vy, args.yaw)),
+        (18.0, lambda: bot.set_velocity(0.0, 0.0, 0.0)), 
+        (22.0, lambda: bot.shutdown()),
+        (25.0, None)
+    ]
     ti = 0
 
     control_dt = 1.0 / args.control_rate

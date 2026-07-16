@@ -5,7 +5,7 @@ Viser is a pure visualizer (no physics), so this just poses the model. The
 firmware emits calibrated servo-space degrees; the URDF's revolute joints are
 named leg_{1..6}_{coxa,femur,tibia}, and cfg::servo_channel(leg, joint) is
 leg*3 + joint, so we map each servo channel to its joint by name and push the
-radians straight in (no extra mapping, unlike the legacy interface).
+radians straight in.
 """
 from __future__ import annotations
 

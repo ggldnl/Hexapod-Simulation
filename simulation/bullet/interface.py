@@ -3,9 +3,8 @@ PyBullet interface: apply the firmware's servo commands to the URDF joints.
 
 The firmware already emits calibrated servo-space degrees, and the URDF's 18
 revolute joints are in leg-major order (leg*3 + joint), the same order as
-cfg::servo_channel, so we apply radians(servo_deg) straight to the joints with
-no extra mapping (unlike the legacy interface, which mapped kinematic->servo
-here).
+cfg::servo_channel, so we apply radians(servo_deg) straight to the joints 
+with no extra mapping.
 """
 from __future__ import annotations
 
@@ -29,7 +28,7 @@ class BulletInterface:
 
     def apply(self, servo_deg: List[float], powered: bool = True) -> None:
         """Drive the joints toward the commanded servo angles (position control).
-        When de-energized (OFF / FAULT), let the legs go limp."""
+        When de-energized (OFF/FAULT), let the legs go limp."""
         for i, joint in enumerate(self.joints):
             self.p.setJointMotorControl2(
                 bodyUniqueId=self.robot,

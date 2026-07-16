@@ -1,11 +1,9 @@
 """
-Viser visualization of the Hexapod-Reimagined stack, with live gait controls.
+Viser visualization of the Hexapod stack, with live gait controls.
 
 Runs the REAL C++ firmware core in-process (via the ctypes bridge) and drives it
 with the ordinary Pi-side HexapodClient. Viser renders the URDF in the browser and
-gives you a control panel to drive the gait directly:
-
-    browser GUI -> HexapodClient -> SimTransport -> Firmware (C++) -> servo deg -> URDF
+gives you a control panel to drive the gait directly.
 
 Viser is a pure visualizer (no physics), so the body stays put and the legs cycle
 in place. It is meant to "show the robot walking" and to poke at the gait live.
@@ -41,9 +39,10 @@ GAIT_ID = {"tripod": GaitId.TRIPOD, "wave": GaitId.WAVE, "ripple": GaitId.RIPPLE
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Hexapod-Reimagined Viser viz + controls")
+
+    ap = argparse.ArgumentParser(description="Hexapod Viser viz + controls")
     ap.add_argument("--urdf", default=str(paths.default_urdf()),
-                    help="path to hexapod.urdf (from the Hexapod-Hardware submodule)")
+                    help="path to hexapod.urdf")
     ap.add_argument("--gait", "-g", default="tripod", choices=list(GAIT_ID))
     ap.add_argument("--port", "-p", type=int, default=8080, help="Viser server port")
     ap.add_argument("--control-rate", "-c", type=float, default=50.0,
@@ -55,19 +54,22 @@ def main() -> None:
         raise SystemExit(f"URDF not found: {urdf_path}\n"
                          "Add the Hexapod-Hardware submodule or pass --urdf.")
 
-    # --- firmware core + client (same client as on the real robot) ---
+    # Firmware core + client (same client as on the real robot)
     fw = Firmware()
     bot = HexapodClient(SimTransport(fw))
 
-    # --- viser scene ---
+    # Store ground height
+    ground = bot.get_body_pose().z
+
+    # Viser scene
     server = viser.ViserServer(port=args.port)
     robot_model = yourdfpy.URDF.load(str(urdf_path), mesh_dir=str(urdf_path.parent))
     urdf = ViserUrdf(server, robot_model, root_node_name="/robot")
     iface = ViserInterface(urdf)
 
-    # --- control panel ---
+    # Control panel
     # Discrete actions (lifecycle / gait) are queued from GUI callbacks and drained
-    # by the loop, so ONLY the loop ever touches the client (no cross-thread races).
+    # by the loop, so ONLY the loop ever touches the client (no cross-thread races)
     actions: "deque[tuple]" = deque()
 
     with server.gui.add_folder("Lifecycle"):
@@ -102,7 +104,7 @@ def main() -> None:
     zero_btn.on_click(lambda _: actions.append(("zero",)))
     gait_dd.on_update(lambda _: actions.append(("gait", gait_dd.value)))
 
-    # --- loop ---
+    # Control loop
     control_dt = 1.0 / args.control_rate
     telemetry_accum = 0.0
     last = time.perf_counter()
@@ -110,7 +112,7 @@ def main() -> None:
 
     try:
         while True:
-            # Drain queued GUI actions (client touched only here).
+            # Drain queued GUI actions (client touched only here)
             while actions:
                 act = actions.popleft()
                 if act[0] == "enable":
@@ -126,19 +128,21 @@ def main() -> None:
                 elif act[0] == "gait":
                     bot.set_gait(GAIT_ID[act[1]])
 
-            # Stream setpoints every tick (also pets the command watchdog).
+            # Stream setpoints every tick (also pets the command watchdog)
             bot.set_velocity(vx_sl.value, vy_sl.value, yaw_sl.value)
             bot.set_body_pose(z=height_sl.value, roll=roll_sl.value,
                               pitch=pitch_sl.value, yaw=poseyaw_sl.value)
 
-            # Advance the firmware and pose the model.
+            # Advance the firmware and pose the model
             fw.update(control_dt)
             iface.apply(fw.servos(), powered=fw.powered())
 
-            # A little ground arrow showing the commanded ground velocity.
-            _draw_velocity_arrow(server, vx_sl.value, vy_sl.value)
+            # A little ground arrow showing the commanded ground velocity
+            walking = vx_sl.value or vy_sl.value or yaw_sl.value
+            if walking:
+                _draw_velocity_arrow(server, vx_sl.value, vy_sl.value, z=ground)
 
-            # Telemetry readout (~5 Hz).
+            # Telemetry readout (~5 Hz)
             telemetry_accum += control_dt
             if telemetry_accum >= 0.2:
                 telemetry_accum = 0.0
@@ -158,15 +162,14 @@ def main() -> None:
         print("\nViser stopped")
 
 
-def _draw_velocity_arrow(server, vx: float, vy: float) -> None:
+def _draw_velocity_arrow(server, vx: float, vy: float, z: float = 0) -> None:
     """Draw (replace) a ground-plane line for the commanded velocity, in meters.
-    Re-adding with the same name replaces the node; wrapped so any viser version
-    quirk can't take down the loop."""
+    Re-adding with the same name replaces the node."""
     scale = 1.0 / 1000.0  # mm/s -> a length in meters
     if abs(vx) < 1e-3 and abs(vy) < 1e-3:
-        start, end = (0, 0, 0.02), (0, 0, 0.03)  # tiny upright tick when stopped
+        start, end = (0, 0, z * scale), (0, 0, z * scale + 0.01)  # tiny upright tick when stopped
     else:
-        start, end = (0, 0, 0.02), (vx * scale, vy * scale, 0.02)
+        start, end = (0, 0, z * scale), (-vy * scale, vx * scale, z * scale)  # different frame convention
     try:
         utils.add_line(server, name="/cmd_vel", start=start, end=end,
                        line_width=4.0, colors=(0, 200, 0))

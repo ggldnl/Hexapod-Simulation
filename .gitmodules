@@ -4,6 +4,8 @@
 [submodule "Hexapod-Controller"]
 	path = Hexapod-Controller
 	url = https://github.com/ggldnl/Hexapod-Controller.git
+	branch = main
 [submodule "Hexapod-Firmware"]
 	path = Hexapod-Firmware
 	url = https://github.com/ggldnl/Hexapod-Firmware.git
+	branch = main
