@@ -84,6 +84,8 @@ The front-ends run as modules from the repository root, with the `hexapod-sim` e
 
   Open the printed URL (default http://localhost:8080). Viser has no physics, so the body stays put and the legs cycle in place while you drive the gait from the control panel.
 
+  The *Kinematic model* panel draws the model from `config.yml` over the mesh: the leg chains, the ground plane the firmware thinks it is standing on, the foot contacts and their support polygon, and the stance the config asks for. Turn the meshes off to read the skeleton on its own. The *Stance* readout gives the same thing as numbers (body height, per-leg stance radius and ground clearance), and *config.yml vs URDF* compares the hand-written link lengths and mounts against the CAD they are meant to describe. The board is provisioned from that same `config.yml` at startup (`--config PATH`, or `--no-provision` to keep the firmware's baked defaults).
+
 - PyBullet physics demo, showing how the robot behaves once physics is involved. It uses the stall torque the servos are rated for to model the motors:
 
   ```bash

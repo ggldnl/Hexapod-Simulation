@@ -13,6 +13,12 @@ Controls (in the browser panel)
     Gait        tripod / wave / ripple
     Velocity    vx, vy (mm/s) and yaw (deg/s)
     Body pose   height, roll, pitch, yaw offsets from standing
+    Kinematics  the config.yml skeleton drawn over the mesh, the ground plane
+                and the foot contacts, plus the stance numbers (see skeleton.py).
+                Turn the meshes off to read the skeleton on its own
+
+The board is provisioned from config.yml at startup, exactly as the Pi does over
+the serial link, so the firmware and the overlay are reading the same numbers.
 
 Build the bridge first:  ./bridge/build.sh
 Run:                     python3 -m simulation.viser.main   [--urdf PATH] [--port 8080]
@@ -31,7 +37,7 @@ from viser.extras import ViserUrdf
 
 from simulation import Firmware, SimTransport, paths
 from simulation.viser.interface import ViserInterface
-from simulation.viser import utils
+from simulation.viser import skeleton, utils
 from hexapod import GaitId, HexapodClient
 
 
@@ -47,6 +53,10 @@ def main() -> None:
     ap.add_argument("--port", "-p", type=int, default=8080, help="Viser server port")
     ap.add_argument("--control-rate", "-c", type=float, default=50.0,
                     help="Hz (matches cfg::CONTROL_RATE_HZ)")
+    ap.add_argument("--config", default=None,
+                    help="path to config.yml (default: the one in the client package)")
+    ap.add_argument("--no-provision", action="store_true",
+                    help="leave the core on its baked defaults instead of config.yml")
     args = ap.parse_args()
 
     urdf_path = Path(args.urdf)
@@ -54,18 +64,40 @@ def main() -> None:
         raise SystemExit(f"URDF not found: {urdf_path}\n"
                          "Add the Hexapod-Hardware submodule or pass --urdf.")
 
+    # One config for both the core and the overlay, so the skeleton on screen is
+    # always the model the firmware is actually walking on
+    config = skeleton.load_config(args.config)
+    kin_cfg = skeleton.KinematicConfig.load(config)
+
     # Firmware core + client (same client as on the real robot)
     fw = Firmware()
     bot = HexapodClient(SimTransport(fw))
-
-    # Store ground height
-    ground = bot.get_body_pose().z
+    if not args.no_provision:
+        try:
+            bot.provision(config)
+        except Exception as e:  # a bad config should not cost you the viewer
+            print(f"warning: provisioning failed ({e}); the core keeps its baked "
+                  "defaults. If a section was rejected for its length, the bridge "
+                  "is older than the protocol: rebuild it with ./bridge/build.sh")
 
     # Viser scene
     server = viser.ViserServer(port=args.port)
     robot_model = yourdfpy.URDF.load(str(urdf_path), mesh_dir=str(urdf_path.parent))
+    # Left on the default (GLB) path on purpose: it is the only one that carries
+    # the URDF's own materials and exported normals. Fading the meshes would mean
+    # viser's flat-shaded add_mesh_simple instead, which does not look like the
+    # robot, so the panel hides them outright rather than making them translucent
     urdf = ViserUrdf(server, robot_model, root_node_name="/robot")
     iface = ViserInterface(urdf)
+
+    # The config's kinematic model, drawn over the mesh, with its origin on the
+    # CAD's femur axes -- the plane the model's foot heights are really measured
+    # from -- and its ground stopped by the CAD's own chassis (see skeleton.py)
+    urdf_geom = skeleton.measure_urdf(robot_model, kin_cfg)
+    overlay = skeleton.SkeletonOverlay(server, kin_cfg, z_offset=urdf_geom.femur_plane,
+                                       chassis_floor=urdf_geom.chassis_floor)
+    model_check = skeleton.compare(kin_cfg, urdf_geom)
+    print(model_check)
 
     # Control panel
     # Discrete actions (lifecycle / gait) are queued from GUI callbacks and drained
@@ -93,6 +125,19 @@ def main() -> None:
         roll_sl = server.gui.add_slider("roll (deg)", -15.0, 15.0, 0.5, 0.0)
         pitch_sl = server.gui.add_slider("pitch (deg)", -15.0, 15.0, 0.5, 0.0)
         poseyaw_sl = server.gui.add_slider("yaw (deg)", -15.0, 15.0, 0.5, 0.0)
+
+    with server.gui.add_folder("Kinematic model"):
+        mesh_cb = server.gui.add_checkbox("Meshes", True)
+        skel_cb = server.gui.add_checkbox("Skeleton", True)
+        stance_cb = server.gui.add_checkbox("Contacts + targets", True)
+        zoff_nb = server.gui.add_number("z offset (mm)", initial_value=overlay.z_offset,
+                                        step=0.5)
+
+    with server.gui.add_folder("Stance"):
+        stance_md = server.gui.add_markdown("-")
+
+    with server.gui.add_folder("config.yml vs URDF", expand_by_default=False):
+        server.gui.add_markdown(model_check)
 
     with server.gui.add_folder("Telemetry"):
         odom_txt = server.gui.add_text("Odometry", initial_value="-", disabled=True)
@@ -135,17 +180,28 @@ def main() -> None:
 
             # Advance the firmware and pose the model
             fw.update(control_dt)
-            iface.apply(fw.servos(), powered=fw.powered())
+            servos = fw.servos()
+            iface.apply(servos, powered=fw.powered())
 
-            # A little ground arrow showing the commanded ground velocity
+            # Redraw the kinematic overlay from those same servo angles, in the
+            # body pose the core is actually holding (mid-slew, not the target)
+            urdf.show_visual = mesh_cb.value
+            overlay.set_visible(skeleton=skel_cb.value, stance=stance_cb.value)
+            overlay.z_offset = zoff_nb.value
+            stance = overlay.update(servos, bot.get_body_pose())
+
+            # A little ground arrow showing the commanded ground velocity, on
+            # the same ground plane the overlay draws
             walking = vx_sl.value or vy_sl.value or yaw_sl.value
             if walking:
-                _draw_velocity_arrow(server, vx_sl.value, vy_sl.value, z=ground)
+                _draw_velocity_arrow(server, vx_sl.value, vy_sl.value,
+                                     z=overlay.z_offset - stance.body_height)
 
             # Telemetry readout (~5 Hz)
             telemetry_accum += control_dt
             if telemetry_accum >= 0.2:
                 telemetry_accum = 0.0
+                stance_md.content = skeleton.report(stance, kin_cfg)
                 try:
                     tel = bot.get_telemetry()
                     state_txt.value = tel.state.name
