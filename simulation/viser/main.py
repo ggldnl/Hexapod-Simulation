@@ -96,8 +96,8 @@ def main() -> None:
     urdf_geom = skeleton.measure_urdf(robot_model, kin_cfg)
     overlay = skeleton.SkeletonOverlay(server, kin_cfg, z_offset=urdf_geom.femur_plane,
                                        chassis_floor=urdf_geom.chassis_floor)
-    model_check = skeleton.compare(kin_cfg, urdf_geom)
-    print(model_check)
+    # model_check = skeleton.compare(kin_cfg, urdf_geom)
+    # print(model_check)
 
     # Control panel
     # Discrete actions (lifecycle / gait) are queued from GUI callbacks and drained
@@ -132,12 +132,6 @@ def main() -> None:
         stance_cb = server.gui.add_checkbox("Contacts + targets", True)
         zoff_nb = server.gui.add_number("z offset (mm)", initial_value=overlay.z_offset,
                                         step=0.5)
-
-    with server.gui.add_folder("Stance"):
-        stance_md = server.gui.add_markdown("-")
-
-    with server.gui.add_folder("config.yml vs URDF", expand_by_default=False):
-        server.gui.add_markdown(model_check)
 
     with server.gui.add_folder("Telemetry"):
         odom_txt = server.gui.add_text("Odometry", initial_value="-", disabled=True)
@@ -201,7 +195,6 @@ def main() -> None:
             telemetry_accum += control_dt
             if telemetry_accum >= 0.2:
                 telemetry_accum = 0.0
-                stance_md.content = skeleton.report(stance, kin_cfg)
                 try:
                     tel = bot.get_telemetry()
                     state_txt.value = tel.state.name

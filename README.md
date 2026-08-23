@@ -30,6 +30,29 @@ bridge/              # sim_bridge.cpp + build.sh, the ctypes glue
 simulation/          # the sim package, with the viser and bullet front-ends
 ```
 
+## 🌿 Branches
+
+Two versions of the robot currently exist. Each branch pins its own commits of the submodules.
+
+| Branch      | What differs                                                                                                                                                                                                       |
+|-------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `main`      | Original version                                                                                                                                                                                                   |
+| `new-tibia` | Tibia redesigned, bigger range of motion. The attachment point is unchanged, so the URDF's joints are identical between the two. What differs is the mesh and the config that describes it to the kinematic model. |
+
+> ⚠️ ️A submodule is pinned by **commit**, not by branch, so checking out a branch here does *not* move the submodules with it. Always follow the checkout with an update, or you get one version's meshes driven by the other version's config:
+
+```bash
+git checkout new-tibia && git submodule update --init --recursive
+```
+
+```bash
+git checkout main && git submodule update --init --recursive
+```
+
+That leaves each submodule on a detached HEAD at the pinned commit, which is normal here — attach to a branch only when you intend to commit something.
+
+Rerun `./bridge/build.sh` whenever the Hexapod-Firmware pointer moves. A `libhexapod_fw.so` older than the firmware's protocol rejects provisioning (mismatch in args size), and the core falls back to its baked-in defaults: the robot then ignores `config.yml` entirely, which looks like a kinematics bug but is a stale build. The warning is printed at startup.
+
 ## 🛠️ Setup
 
 You need a C++ compiler (g++) to build the firmware core and `mamba` (or `conda`) for the Python environment.
