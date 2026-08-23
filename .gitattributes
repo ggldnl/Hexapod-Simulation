@@ -1,0 +1,4 @@
+# Shell scripts must keep LF: this tree is checked out on Windows, where
+# core.autocrlf=true would give them CRLF, and a shebang with a trailing
+# CR fails under WSL/Linux with: /usr/bin/env: 'bash': No such file
+*.sh text eol=lf
