@@ -1,7 +1,19 @@
 # Hexapod Simulation
 
-This repository includes the code to simulate the Hexapod.
-It includes code to visualize and interact with the robot in Viser and code to simulate it in a PyBullet environment.
+This repository includes the code to visualize and interact with the robot in Viser and PyBullet.
+
+### Viser
+
+<table>
+  <tr>
+    <td><img src="media/viser_meshes.png" alt="Meshes"></td>
+  </tr>
+  <tr>
+    <td><img src="media/viser_kinematic_skeleton.png" alt="Kinematic Skeleton"></td>
+  </tr>
+</table>
+
+### PyBullet
 
 <table>
   <tr>
@@ -13,6 +25,8 @@ It includes code to visualize and interact with the robot in Viser and code to s
     <td><img src="media/ripple.gif" alt="Ripple gait"></td>
   </tr>
 </table>
+
+> ⚠️ These PyBullet recordings were taken in a previous version, now the robot is colored
 
 For a complete overview of the project, refer to the [main Hexapod repository](https://github.com/ggldnl/Hexapod).
 
@@ -99,7 +113,7 @@ You need a C++ compiler (g++) to build the firmware core and `mamba` (or `conda`
 
 The front-ends run as modules from the repository root, with the `hexapod-sim` environment active.
 
-- Viser browser demo, showing the Hexapod moving forward and adjusting body height, yaw and speed along the way:
+- Viser browser demo:
 
   ```bash
   python -m simulation.viser.main
@@ -107,9 +121,9 @@ The front-ends run as modules from the repository root, with the `hexapod-sim` e
 
   Open the printed URL (default http://localhost:8080). Viser has no physics, so the body stays put and the legs cycle in place while you drive the gait from the control panel.
 
-  The *Kinematic model* panel draws the model from `config.yml` over the mesh: the leg chains, the ground plane the firmware thinks it is standing on, the foot contacts and their support polygon, and the stance the config asks for. Turn the meshes off to read the skeleton on its own. The *Stance* readout gives the same thing as numbers (body height, per-leg stance radius and ground clearance), and *config.yml vs URDF* compares the hand-written link lengths and mounts against the CAD they are meant to describe. The board is provisioned from that same `config.yml` at startup (`--config PATH`, or `--no-provision` to keep the firmware's baked defaults).
+  The *Kinematic model* panel draws the model from `config.yml` over the mesh: the leg chains, the ground plane the firmware thinks it is standing on, the foot contacts and their support polygon, and the stance the config asks for. Turn the meshes off to read the skeleton on its own. The board is provisioned from that same `config.yml` at startup (`--config PATH`, or `--no-provision` to keep the firmware's baked defaults).
 
-- PyBullet physics demo, showing how the robot behaves once physics is involved. It uses the stall torque the servos are rated for to model the motors:
+- PyBullet physics demo, showing how the robot behaves once physics is involved. It uses the stall torque the servos are rated for to model the motors and uses accurate body mass (as if the parts were printed in ABS):
 
   ```bash
   python -m simulation.bullet.main
