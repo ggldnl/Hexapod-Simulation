@@ -32,6 +32,10 @@ to PyBullet's own keyboard events, so it stays usable without a pad.
         X                     shutdown (sit down)
         Z                     enable / stand up
 
+Full stick commands the config's safety.lin_vel_max / ang_vel_max (the most the
+board accepts), and the HUD above the robot shows the speed it really reaches.
+A gait change asked for while walking takes effect once the robot has stopped.
+
 Note on controller indices
 --------------------------
 SDL/pygame axis & button indices are not universal; they depend on the pad and
@@ -47,10 +51,13 @@ from pathlib import Path
 import pybullet as p
 import pybullet_data
 import pybullet_utils.bullet_client as bc
+import yaml
 
 from simulation import Firmware, SimTransport, paths
 from simulation.bullet.interface import BulletInterface
+from simulation.bullet.metrics import Hud, Speedometer, follow_camera
 from hexapod import GaitId, HexapodClient
+from hexapod.client import DEFAULT_CONFIG
 
 
 # Controller mapping (SDL / pygame indices, adjust with --calibrate)
@@ -76,9 +83,7 @@ BUTTON_ENABLE = 3     # enable / stand up
 
 AXIS_DEADZONE = 0.12  # ignore small stick noise around center
 
-# Command scales and pose increments
-LIN_VEL_MAX = 150.0   # mm/s at full stick
-ANG_VEL_MAX = 45.0    # deg/s at full stick
+# Pose increments (full-stick speeds come from the config's safety limits)
 PITCH_MAX = 10.0      # deg at full stick
 HEIGHT_STEP = 5.0     # mm per D-pad / key press
 
@@ -238,6 +243,12 @@ def main():
     parser = argparse.ArgumentParser(description="Interactive PyBullet Hexapod teleop")
     parser.add_argument("--urdf", default=str(paths.default_urdf()),
                         help="path to hexapod.urdf")
+    parser.add_argument("--config", default=None,
+                        help="path to config.yml (default: the one in the client package)")
+    parser.add_argument("--no-provision", action="store_true",
+                        help="leave the core on its baked defaults instead of config.yml")
+    parser.add_argument("--no-follow", action="store_true",
+                        help="keep the camera still instead of following the robot")
     parser.add_argument("--gait", "-g", type=str, default="tripod",
                         choices=GAITS, help="initial gait pattern")
     parser.add_argument("--input", "-i", type=str, default="auto",
@@ -278,9 +289,23 @@ def main():
                                 flags=physics.URDF_USE_INERTIA_FROM_FILE)
     iface = BulletInterface(physics, robot_id)
 
-    # Firmware core + client (same client as the real robot)
+    config_path = Path(args.config) if args.config else DEFAULT_CONFIG
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+    lin_vel_max = float(config["safety"]["lin_vel_max"])   # mm/s at full stick
+    ang_vel_max = float(config["safety"]["ang_vel_max"])   # deg/s at full stick
+
+    # Firmware core + client (same client as the real robot), provisioned from
+    # the config before it is energized, as the Pi does at connect
     fw = Firmware()
     bot = HexapodClient(SimTransport(fw))
+    if not args.no_provision:
+        try:
+            bot.provision(config)
+        except Exception as e:  # a bad config should not cost you the sim
+            print(f"warning: provisioning failed ({e}); the core keeps its baked "
+                  "defaults. If a section was rejected for its length, the bridge "
+                  "is older than the protocol: rebuild it with ./bridge/build.sh")
     bot.enable()
     bot.set_gait(GAIT_ID[args.gait])
     gait_index = GAITS.index(args.gait)
@@ -299,18 +324,25 @@ def main():
         source = KeyboardInput(physics)
 
     print(f"Teleop ready - gait={GAITS[gait_index]}, "
-          f"control {args.control_rate} Hz, physics {args.sim_rate} Hz")
+          f"control {args.control_rate} Hz, physics {args.sim_rate} Hz, "
+          f"full stick {lin_vel_max:.0f} mm/s / {ang_vel_max:.0f} deg/s")
 
     control_dt = 1.0 / args.control_rate
     sim_steps = max(1, round(args.sim_rate / args.control_rate))
+    # One control tick of physics per tick (the default 1/240 s step would make
+    # 5 steps 20.8 ms against the firmware's 20 ms: a 4% fast world)
+    physics.setTimeStep(control_dt / sim_steps)
     height_offset = 0.0
-    hud_id = -1
+    speedo = Speedometer(physics, robot_id, window=float(config["gaits"]["cycle_time"]))
+    hud = Hud(physics, robot_id)
     hud_accumulator = 0.0
+    gait_pending = False   # a gait change waiting for the walk to stop
     last = time.perf_counter()
 
     try:
         while physics.isConnected():
             cmd = source.read()
+            tel = bot.get_telemetry()
 
             # Lifecycle
             if cmd.get('shutdown'):
@@ -318,20 +350,23 @@ def main():
             if cmd.get('enable'):
                 bot.enable()
 
-            # Gait selection
-            if cmd.get('gait_override'):
-                gait_index = GAITS.index(cmd['gait_override'])
+            # Gait selection (the board holds a mid-walk change until it stops)
+            if cmd.get('gait_override') or cmd.get('cycle_gait'):
+                if cmd.get('gait_override'):
+                    gait_index = GAITS.index(cmd['gait_override'])
+                else:
+                    gait_index = (gait_index + 1) % len(GAITS)
                 bot.set_gait(GAIT_ID[GAITS[gait_index]])
-            elif cmd.get('cycle_gait'):
-                gait_index = (gait_index + 1) % len(GAITS)
-                bot.set_gait(GAIT_ID[GAITS[gait_index]])
+                gait_pending = tel.state.name == "WALK"
+            elif tel.state.name != "WALK":
+                gait_pending = False
 
             # Velocity (held convention; zeroed when deadman released). The new
             # client folds linear + angular into a single set_velocity call.
+            vx = vy = 0.0
             if cmd['enabled']:
-                bot.set_velocity(cmd['vx_norm'] * LIN_VEL_MAX,
-                                 cmd['vy_norm'] * LIN_VEL_MAX,
-                                 cmd['wz_norm'] * ANG_VEL_MAX)
+                vx, vy = cmd['vx_norm'] * lin_vel_max, cmd['vy_norm'] * lin_vel_max
+                bot.set_velocity(vx, vy, cmd['wz_norm'] * ang_vel_max)
             else:
                 bot.set_velocity(0.0, 0.0, 0.0)
 
@@ -345,19 +380,19 @@ def main():
             iface.apply(fw.servos(), powered=fw.powered())
             for _ in range(sim_steps):
                 physics.stepSimulation()
+            speedo.update(control_dt, tel)
+            if not args.no_follow:
+                follow_camera(physics, robot_id)
 
             # Lightweight HUD (~5 Hz)
             hud_accumulator += control_dt
             if hud_accumulator >= 0.2:
                 hud_accumulator = 0.0
-                tel = bot.get_telemetry()
-                status = (f"state={tel.state.name}  gait={GAITS[gait_index]}  "
+                gait = GAITS[gait_index] + (" (at stop)" if gait_pending else "")
+                status = (f"state={tel.state.name}  gait={gait}  "
                           f"h={height_offset:+.0f} mm  "
-                          f"odom=({tel.odom_x:+.0f},{tel.odom_y:+.0f}) mm  "
                           f"{tel.voltage:.1f} V  {tel.current:.2f} A")
-                hud_id = physics.addUserDebugText(
-                    status, [-0.25, 0, 0.25], textColorRGB=[1, 1, 1], textSize=1.1,
-                    replaceItemUniqueId=hud_id if hud_id >= 0 else -1)
+                hud.show([status] + speedo.lines(commanded=(vx * vx + vy * vy) ** 0.5))
 
             # Real-time pacing
             last += control_dt

@@ -129,6 +129,16 @@ The front-ends run as modules from the repository root, with the `hexapod-sim` e
   python -m simulation.bullet.main
   ```
 
+  Both PyBullet front-ends provision the board from `config.yml` at startup, like the viser one (`--config PATH`, `--no-provision`), follow the robot with the camera (`--no-follow` to stop) and show its speed above it: the speed PyBullet measures, the speed the gait executes (the firmware's odometry), how much of it survives foot slip, and the best one-cycle average.
+
+- Top-speed benchmark: walks straight at the most the config allows, stops, restarts and stops again, then prints the speed reached against Chica's and the peak joint speed the firmware commanded while walking, stopping and restarting:
+
+  ```bash
+  python -m simulation.bullet.main --speed-test              # watch it
+  python -m simulation.bullet.main --speed-test --headless   # no window, a few seconds
+  python -m simulation.bullet.main --speed-test --config my_config.yml --hold 15
+  ```
+
 - PyBullet teleop, driving the robot live with a game controller (PS3/Xbox-style) or the keyboard:
 
   ```bash
@@ -136,7 +146,7 @@ The front-ends run as modules from the repository root, with the `hexapod-sim` e
   python -m simulation.bullet.teleop --calibrate # print live axis/button indices for your pad
   ```
 
-  Left stick translates, right stick turns and tilts the body, hold R1 as a deadman. Keyboard fallback: `WASD` to move, `Q`/`E` to turn, `R`/`F` for height, `1`/`2`/`3` to switch gait. See the module docstring for the full mapping.
+  Left stick translates, right stick turns and tilts the body, hold R1 as a deadman. Full stick commands the config's `safety.lin_vel_max` / `ang_vel_max`, and a gait change asked for while walking takes effect once the robot stops. Keyboard fallback: `WASD` to move, `Q`/`E` to turn, `R`/`F` for height, `1`/`2`/`3` to switch gait. See the module docstring for the full mapping.
 
 ## 🤝 Contribution
 
